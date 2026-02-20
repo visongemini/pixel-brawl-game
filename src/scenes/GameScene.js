@@ -1,26 +1,21 @@
 class GameScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'GameScene' });
+        super('GameScene');
     }
     
     init(data) {
-        this.selectedCharacter = data.selectedCharacter;
-        this.gameTime = 180; // 3分钟倒计时
+        this.selectedChar = data.selectedCharacter;
+        this.gameTime = 180;
         this.isGameOver = false;
-        this.frameCount = 0;
     }
     
     create() {
-        console.log('=== GameScene.create 开始 ===');
-        
-        // 背景
         this.add.image(320, 480, 'background');
-        
-        // 物理世界边界
         this.physics.world.setBounds(0, 0, 640, 960);
         
-        // ===== 先创建子弹组！必须在碰撞设置之前 =====
-        this.createInputs();
+        // 创建子弹组
+        this.bullets = this.physics.add.group({ classType: Bullet, runChildUpdate: true });
+        this.enemyBullets = this.physics.add.group({ classType: Bullet, runChildUpdate: true });
         
         // 创建玩家
         this.createPlayer();
@@ -34,283 +29,148 @@ class GameScene extends Phaser.Scene {
         // 创建碰撞
         this.createCollisions();
         
+        // 创建输入控制
+        this.createInputs();
+        
         // 开始倒计时
         this.startTimer();
         
-        // 游戏开始提示
+        // 开始提示
         this.showStartHint();
-        
-        console.log('=== GameScene.create 完成 ===');
     }
     
     createPlayer() {
-        console.log('创建玩家:', this.selectedCharacter.name);
-        this.player = new Player(this, 320, 850, this.selectedCharacter);
+        this.player = new Player(this, 320, 850, this.selectedChar);
         this.player.setDepth(10);
-        
-        // 出生特效
-        const spawnEffect = this.add.circle(this.player.x, this.player.y, 50, 0xFFFFFF, 0.8);
-        this.tweens.add({
-            targets: spawnEffect,
-            scale: 2,
-            alpha: 0,
-            duration: 500,
-            onComplete: () => spawnEffect.destroy()
-        });
     }
     
     createEnemies() {
-        console.log('创建敌人...');
         this.enemies = this.physics.add.group();
-        
-        // 获取其他6个角色
         const allChars = getAllCharacters();
-        const enemyChars = allChars.filter(c => c.id !== this.selectedCharacter.id);
-        console.log('敌人数量:', enemyChars.length);
+        const enemyChars = allChars.filter(c => c.id !== this.selectedChar.id);
         
-        // 随机位置生成敌人
-        enemyChars.forEach((char, index) => {
-            const x = 80 + (index % 3) * 220 + Phaser.Math.Between(-40, 40);
-            const y = 120 + Math.floor(index / 3) * 150 + Phaser.Math.Between(-30, 30);
-            
-            console.log(`创建敌人 ${index + 1}:`, char.name, '在', x, y);
+        enemyChars.forEach((char, i) => {
+            const x = 80 + (i % 3) * 220 + Phaser.Math.Between(-30, 30);
+            const y = 120 + Math.floor(i / 3) * 150 + Phaser.Math.Between(-20, 20);
             const enemy = new Enemy(this, x, y, char, this.player);
-            enemy.setDepth(10);
             this.enemies.add(enemy);
-            
-            // 出生特效
-            const spawnEffect = this.add.circle(x, y, 40, char.color, 0.6);
-            this.tweens.add({
-                targets: spawnEffect,
-                scale: 1.5,
-                alpha: 0,
-                duration: 400,
-                onComplete: () => spawnEffect.destroy()
-            });
         });
     }
     
     createUI() {
-        // 版本号（右上角）
-        this.add.text(620, 20, 'v1.7', {
-            fontSize: '16px',
-            fill: '#888888',
-            fontStyle: 'bold'
-        }).setOrigin(1, 0);
-        
         // 倒计时
-        this.timerText = this.add.text(320, 40, '180', {
+        this.timerText = this.add.text(320, 50, '3:00', {
             fontSize: '48px',
-            fill: '#FFD93D',
+            fill: '#ffd93d',
             fontStyle: 'bold',
-            stroke: '#000000',
+            stroke: '#000',
             strokeThickness: 4
         }).setOrigin(0.5);
         
-        // 倒计时标签
-        this.add.text(320, 75, '秒', {
-            fontSize: '16px',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-        
-        // 剩余敌人
-        this.enemyText = this.add.text(30, 30, `敌人: ${this.enemies.countActive()}`, {
+        // 敌人数量
+        this.enemyText = this.add.text(20, 30, '敌人: 6', {
             fontSize: '20px',
-            fill: '#FF6B6B',
+            fill: '#ff6b6b',
             fontStyle: 'bold',
-            stroke: '#000000',
+            stroke: '#000',
             strokeThickness: 3
         });
         
+        // 玩家血条
+        this.playerHpText = this.add.text(620, 30, `${this.player.hp}/${this.player.maxHp}`, {
+            fontSize: '18px',
+            fill: '#fff',
+            fontStyle: 'bold'
+        }).setOrigin(1, 0);
+        
         // 技能提示
-        this.skillHint = this.add.text(320, 900, `【点击右下角按钮】${this.selectedCharacter.skill.name}`, {
-            fontSize: '16px',
-            fill: '#4ECDC4',
-            fontStyle: 'bold',
-            backgroundColor: '#000000',
+        this.add.text(320, 880, `【右下角】${this.selectedChar.skill.name}`, {
+            fontSize: '14px',
+            fill: '#4ecdc4',
+            backgroundColor: '#000',
             padding: { x: 10, y: 5 }
         }).setOrigin(0.5);
-        
-        // 玩家血条（大）
-        this.playerHpBg = this.add.rectangle(550, 30, 150, 20, 0x333333);
-        this.playerHpBar = this.add.rectangle(475, 30, 150, 20, 0x00FF00);
-        this.playerHpBar.setOrigin(0, 0.5);
-        
-        this.playerHpText = this.add.text(550, 55, `${this.player.hp}/${this.player.maxHp}`, {
-            fontSize: '14px',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-    }
-    
-    updateUI() {
-        // 更新敌人数量
-        const aliveEnemies = this.enemies.countActive();
-        this.enemyText.setText(`敌人: ${aliveEnemies}`);
-        
-        // 更新玩家血条
-        const hpRatio = this.player.hp / this.player.maxHp;
-        this.playerHpBar.width = 150 * hpRatio;
-        this.playerHpText.setText(`${Math.max(0, this.player.hp)}/${this.player.maxHp}`);
-        
-        // 改变血条颜色
-        if (hpRatio > 0.6) {
-            this.playerHpBar.fillColor = 0x00FF00;
-        } else if (hpRatio > 0.3) {
-            this.playerHpBar.fillColor = 0xFFFF00;
-        } else {
-            this.playerHpBar.fillColor = 0xFF0000;
-        }
-        
-        // 检查胜利条件
-        if (aliveEnemies === 0 && !this.isGameOver) {
-            this.gameWin();
-        }
     }
     
     createCollisions() {
-        console.log('创建碰撞检测...');
+        // 玩家子弹打敌人
+        this.physics.add.overlap(this.bullets, this.enemies, (b, e) => {
+            if (!b.active || !e.active) return;
+            e.takeDamage(b.bulletDamage);
+            this.createHitEffect(b.x, b.y, b.tintTopLeft || 0xffffff);
+            b.destroy();
+            this.updateUI();
+        }, null, this);
         
-        // 玩家子弹击中敌人
-        this.physics.add.overlap(
-            this.bullets,
-            this.enemies,
-            (bullet, enemy) => {
-                console.log('💥 玩家子弹击中敌人!');
-                this.hitEnemy(bullet, enemy);
-            },
-            null,
-            this
-        );
+        // 敌人子弹打玩家
+        this.physics.add.overlap(this.enemyBullets, this.player, (b, p) => {
+            if (!b.active) return;
+            const dead = p.takeDamage(b.bulletDamage);
+            this.createHitEffect(b.x, b.y, 0xff0000);
+            b.destroy();
+            this.updateUI();
+            if (dead && !this.isGameOver) this.gameLose('death');
+        }, null, this);
         
-        // 敌人子弹击中玩家
-        this.physics.add.overlap(
-            this.enemyBullets,
-            this.player,
-            (bullet, player) => {
-                console.log('💥 敌人子弹击中玩家!');
-                this.hitPlayer(bullet, player);
-            },
-            null,
-            this
-        );
-        
-        // 敌人和敌人之间碰撞
+        // 敌人之间碰撞
         this.physics.add.collider(this.enemies, this.enemies);
-        
-        // 敌人和玩家碰撞
         this.physics.add.collider(this.enemies, this.player);
-        
-        console.log('碰撞检测创建完成!');
     }
     
     createInputs() {
-        console.log('创建输入控制...');
-        
-        // 创建子弹组（必须先创建，后面碰撞检测要用）
-        this.bullets = this.physics.add.group({
-            classType: Bullet,
-            runChildUpdate: true
-        });
-        
-        this.enemyBullets = this.physics.add.group({
-            classType: Bullet,
-            runChildUpdate: true
-        });
-
-        // ===== 触屏控制 =====
-        const width = this.scale.width;
-        const height = this.scale.height;
-        console.log('游戏尺寸:', width, 'x', height);
-        
-        // 虚拟摇杆（左半边屏幕）
+        // 虚拟摇杆
         this.joystick = {
             active: false,
-            baseX: 120,
-            baseY: height - 120,
-            stickX: 120,
-            stickY: height - 120,
-            maxDist: 60,
-            pointer: null
+            baseX: 100,
+            baseY: 880,
+            stickX: 100,
+            stickY: 880,
+            maxDist: 50
         };
         
-        // 摇杆底座
-        this.joystickBase = this.add.circle(this.joystick.baseX, this.joystick.baseY, 60, 0x333333, 0.5);
-        this.joystickBase.setStrokeStyle(3, 0x666666);
-        this.joystickBase.setDepth(100);
+        this.joyBase = this.add.circle(100, 880, 50, 0x333333, 0.5).setStrokeStyle(2, 0x666).setDepth(100);
+        this.joyStick = this.add.circle(100, 880, 22, 0x00d4aa, 0.8).setDepth(101);
         
-        // 摇杆头
-        this.joystickStick = this.add.circle(this.joystick.stickX, this.joystick.stickY, 25, 0x00d4aa, 0.8);
-        this.joystickStick.setDepth(101);
+        // 技能按钮
+        this.skillBtn = this.add.circle(560, 880, 45, 0xe94560, 0.8)
+            .setStrokeStyle(3, 0xff6b6b).setDepth(100)
+            .setInteractive();
         
-        // 技能按钮（右下角）
-        this.skillBtn = this.add.circle(width - 80, height - 80, 50, 0xe94560, 0.8);
-        this.skillBtn.setStrokeStyle(4, 0xff6b6b);
-        this.skillBtn.setDepth(100);
-        
-        this.skillBtnText = this.add.text(width - 80, height - 80, '技能', {
-            fontSize: '20px',
-            fill: '#ffffff',
+        this.add.text(560, 880, '技能', {
+            fontSize: '18px',
+            fill: '#fff',
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(101);
         
-        // 射击区域提示（右半边）
-        this.shootHint = this.add.text(width - 120, height - 200, '点击射击', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            alpha: 0.5
-        }).setOrigin(0.5).setDepth(100);
+        this.skillBtn.on('pointerdown', () => {
+            if (!this.isGameOver) this.player.useSkill(this.player.x, this.player.y - 100);
+            this.tweens.add({ targets: this.skillBtn, scale: 0.9, duration: 80, yoyo: true });
+        });
         
-        // 触屏事件处理
-        this.input.on('pointerdown', (pointer) => {
-            console.log('👆 点击事件! 位置:', pointer.x, pointer.y);
-            if (this.isGameOver || !this.player.active) {
-                console.log('游戏已结束或玩家不活跃，忽略点击');
-                return;
-            }
+        // 点击射击
+        this.input.on('pointerdown', (p) => {
+            if (this.isGameOver) return;
             
-            const x = pointer.x;
-            const y = pointer.y;
-            const centerX = width / 2;
-            
-            // 左半边 = 摇杆
-            if (x < centerX) {
-                console.log('🎮 激活摇杆');
+            if (p.x < 320) {
+                // 左半边 = 摇杆
                 this.joystick.active = true;
-                this.joystick.pointer = pointer;
-                this.updateJoystick(pointer.x, pointer.y);
+                this.updateJoystick(p.x, p.y);
+            } else if (p.x < 500) {
+                // 中间 = 射击
+                this.autoFire();
             }
-            // 右半边 = 射击（点击即可，自动瞄准）
-            else {
-                // 检查是否点到技能按钮
-                const distToSkill = Phaser.Math.Distance.Between(x, y, width - 80, height - 80);
-                if (distToSkill < 60) {
-                    console.log('🔥 释放技能!');
-                    this.fireSkill();
-                } else {
-                    console.log('🔫 自动射击!');
-                    this.autoFire();
-                }
-            }
+            // 右边技能按钮已经单独处理
         });
         
-        this.input.on('pointermove', (pointer) => {
-            if (this.joystick.active && this.joystick.pointer === pointer) {
-                this.updateJoystick(pointer.x, pointer.y);
-            }
+        this.input.on('pointermove', (p) => {
+            if (this.joystick.active) this.updateJoystick(p.x, p.y);
         });
         
-        this.input.on('pointerup', (pointer) => {
-            if (this.joystick.pointer === pointer) {
-                console.log('✋ 释放摇杆');
-                this.joystick.active = false;
-                this.joystick.pointer = null;
-                // 摇杆复位
-                this.joystickStick.x = this.joystick.baseX;
-                this.joystickStick.y = this.joystick.baseY;
-            }
+        this.input.on('pointerup', () => {
+            this.joystick.active = false;
+            this.joyStick.x = this.joystick.baseX;
+            this.joyStick.y = this.joystick.baseY;
         });
-        
-        console.log('输入控制创建完成!');
     }
     
     updateJoystick(x, y) {
@@ -327,65 +187,25 @@ class GameScene extends Phaser.Scene {
             this.joystick.stickY = this.joystick.baseY + Math.sin(angle) * this.joystick.maxDist;
         }
         
-        this.joystickStick.x = this.joystick.stickX;
-        this.joystickStick.y = this.joystick.stickY;
+        this.joyStick.x = this.joystick.stickX;
+        this.joyStick.y = this.joystick.stickY;
     }
     
     autoFire() {
-        console.log('autoFire() 被调用');
-        // 自动瞄准最近的敌人
-        let nearestEnemy = null;
+        let nearest = null;
         let nearestDist = Infinity;
         
-        this.enemies.getChildren().forEach(enemy => {
-            if (!enemy.active) return;
-            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestEnemy = enemy;
-            }
+        this.enemies.getChildren().forEach(e => {
+            if (!e.active) return;
+            const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y);
+            if (d < nearestDist) { nearestDist = d; nearest = e; }
         });
         
-        if (nearestEnemy) {
-            console.log('瞄准敌人:', nearestEnemy.characterData.name);
-            this.player.fire(nearestEnemy.x, nearestEnemy.y);
+        if (nearest) {
+            this.player.fire(nearest.x, nearest.y);
         } else {
-            console.log('没有敌人，向前射击');
-            // 没有敌人就向前射
             this.player.fire(this.player.x, this.player.y - 100);
         }
-    }
-    
-    fireSkill() {
-        console.log('fireSkill() 被调用');
-        // 自动瞄准最近的敌人释放技能
-        let nearestEnemy = null;
-        let nearestDist = Infinity;
-        
-        this.enemies.getChildren().forEach(enemy => {
-            if (!enemy.active) return;
-            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestEnemy = enemy;
-            }
-        });
-        
-        if (nearestEnemy) {
-            console.log('对敌人释放技能:', nearestEnemy.characterData.name);
-            this.player.useSkill(nearestEnemy.x, nearestEnemy.y);
-        } else {
-            console.log('没有敌人，向前释放技能');
-            this.player.useSkill(this.player.x, this.player.y - 100);
-        }
-        
-        // 按钮按下效果
-        this.tweens.add({
-            targets: this.skillBtn,
-            scale: 0.9,
-            duration: 50,
-            yoyo: true
-        });
     }
     
     startTimer() {
@@ -393,26 +213,16 @@ class GameScene extends Phaser.Scene {
             delay: 1000,
             callback: () => {
                 this.gameTime--;
-                // 格式化为分:秒
-                const minutes = Math.floor(this.gameTime / 60);
-                const seconds = this.gameTime % 60;
-                this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+                const m = Math.floor(this.gameTime / 60);
+                const s = this.gameTime % 60;
+                this.timerText.setText(`${m}:${s.toString().padStart(2, '0')}`);
                 
-                // 时间警告
                 if (this.gameTime <= 30) {
-                    this.timerText.setFill('#FF0000');
-                    this.tweens.add({
-                        targets: this.timerText,
-                        scale: 1.2,
-                        duration: 200,
-                        yoyo: true
-                    });
+                    this.timerText.setFill('#ff0000');
+                    this.tweens.add({ targets: this.timerText, scale: 1.15, duration: 150, yoyo: true });
                 }
                 
-                // 时间到
-                if (this.gameTime <= 0 && !this.isGameOver) {
-                    this.gameLose('timeout');
-                }
+                if (this.gameTime <= 0 && !this.isGameOver) this.gameLose('timeout');
             },
             loop: true
         });
@@ -421,13 +231,11 @@ class GameScene extends Phaser.Scene {
     showStartHint() {
         const hint = this.add.text(320, 480, '战斗开始!', {
             fontSize: '48px',
-            fill: '#FFD93D',
+            fill: '#ffd93d',
             fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 6
-        }).setOrigin(0.5);
-        
-        hint.setScale(0);
+            stroke: '#000',
+            strokeThickness: 5
+        }).setOrigin(0.5).setScale(0);
         
         this.tweens.add({
             targets: hint,
@@ -435,91 +243,62 @@ class GameScene extends Phaser.Scene {
             duration: 300,
             ease: 'Back.out',
             onComplete: () => {
-                this.time.delayedCall(1500, () => {
-                    this.tweens.add({
-                        targets: hint,
-                        alpha: 0,
-                        duration: 300,
-                        onComplete: () => hint.destroy()
-                    });
+                this.time.delayedCall(1200, () => {
+                    this.tweens.add({ targets: hint, alpha: 0, duration: 250, onComplete: () => hint.destroy() });
                 });
             }
         });
     }
     
-    hitEnemy(bullet, enemy) {
-        console.log('=== hitEnemy 被调用 ===');
-        if (!bullet.active || !enemy.active) {
-            console.log('子弹或敌人不活跃，跳过');
-            return;
-        }
-        
-        // 使用子弹的伤害值，如果没有就用默认值
-        const damage = bullet.bulletDamage || 10;
-        console.log('造成伤害:', damage, '子弹伤害:', bullet.bulletDamage);
-        enemy.takeDamage(damage);
-        
-        // 击中特效
-        const hitColor = bullet.tintTopLeft || 0xFFFFFF;
-        this.createHitEffect(bullet.x, bullet.y, hitColor);
-        
-        bullet.destroy();
-        
-        // 更新UI
-        this.updateUI();
-    }
-    
-    hitPlayer(bullet, player) {
-        console.log('=== hitPlayer 被调用 ===');
-        if (!bullet.active || !player.active) return;
-        
-        const result = player.takeDamage(bullet.bulletDamage);
-        bullet.destroy();
-        
-        // 击中特效
-        this.createHitEffect(bullet.x, bullet.y, 0xFF0000);
-        
-        // 更新UI
-        this.updateUI();
-        
-        // 检查死亡
-        if (player.hp <= 0 && !this.isGameOver) {
-            this.gameLose('death');
-        }
-    }
-    
     createHitEffect(x, y, color) {
-        // 爆炸粒子
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2;
-            const speed = 50 + Math.random() * 50;
-            const particle = this.add.circle(x, y, 4, color);
-            
+            const speed = 40 + Math.random() * 40;
+            const p = this.add.circle(x, y, 4, color);
             this.tweens.add({
-                targets: particle,
+                targets: p,
                 x: x + Math.cos(angle) * speed,
                 y: y + Math.sin(angle) * speed,
                 alpha: 0,
                 scale: 0,
-                duration: 300,
-                onComplete: () => particle.destroy()
+                duration: 280,
+                onComplete: () => p.destroy()
             });
         }
+    }
+    
+    updateUI() {
+        const alive = this.enemies.countActive();
+        this.enemyText.setText(`敌人: ${alive}`);
+        this.playerHpText.setText(`${Math.max(0, this.player.hp)}/${this.player.maxHp}`);
+        
+        if (alive === 0 && !this.isGameOver) this.gameWin();
     }
     
     gameWin() {
         this.isGameOver = true;
         this.timerEvent.remove();
         
-        // 胜利特效
-        this.createVictoryEffect();
+        // 彩花
+        const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
+        for (let i = 0; i < 40; i++) {
+            const x = Phaser.Math.Between(0, 640);
+            const y = Phaser.Math.Between(0, 400);
+            const c = Phaser.Utils.Array.GetRandom(colors);
+            const conf = this.add.rectangle(x, y, 10, 10, c);
+            this.tweens.add({
+                targets: conf,
+                y: y + 300,
+                rotation: Math.PI * 2,
+                alpha: 0,
+                duration: 1800,
+                ease: 'Power2',
+                onComplete: () => conf.destroy()
+            });
+        }
         
         this.time.delayedCall(1500, () => {
-            this.scene.start('GameOverScene', {
-                result: 'win',
-                character: this.selectedCharacter,
-                timeLeft: this.gameTime
-            });
+            this.scene.start('GameOverScene', { result: 'win', char: this.selectedChar, timeLeft: this.gameTime });
         });
     }
     
@@ -527,116 +306,46 @@ class GameScene extends Phaser.Scene {
         this.isGameOver = true;
         this.timerEvent.remove();
         
-        // 失败提示
-        const loseText = this.add.text(480, 320, 
-            reason === 'timeout' ? '时间到!' : '你挂了!', {
+        const text = this.add.text(320, 480, reason === 'timeout' ? '时间到!' : '你挂了!', {
             fontSize: '64px',
-            fill: '#FF0000',
+            fill: '#ff0000',
             fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 6
-        }).setOrigin(0.5);
+            stroke: '#000',
+            strokeThickness: 5
+        }).setOrigin(0.5).setScale(0.5);
         
-        this.tweens.add({
-            targets: loseText,
-            scale: { from: 0.5, to: 1.2 },
-            duration: 300,
-            ease: 'Back.out'
-        });
+        this.tweens.add({ targets: text, scale: 1.2, duration: 250, ease: 'Back.out' });
         
-        this.time.delayedCall(2000, () => {
-            this.scene.start('GameOverScene', {
-                result: 'lose',
-                character: this.selectedCharacter,
-                reason: reason
-            });
-        });
-    }
-    
-    createVictoryEffect() {
-        // 彩花效果
-        const colors = [0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF];
-        
-        for (let i = 0; i < 50; i++) {
-            const x = Phaser.Math.Between(0, 960);
-            const y = Phaser.Math.Between(0, 640);
-            const color = Phaser.Utils.Array.GetRandom(colors);
-            
-            const confetti = this.add.rectangle(x, y, 10, 10, color);
-            confetti.rotation = Math.random() * Math.PI;
-            
-            this.tweens.add({
-                targets: confetti,
-                y: y + 200,
-                rotation: confetti.rotation + Math.PI * 2,
-                alpha: 0,
-                duration: 1500,
-                ease: 'Power2',
-                onComplete: () => confetti.destroy()
-            });
-        }
-        
-        // 胜利文字
-        const victoryText = this.add.text(480, 320, '胜利!', {
-            fontSize: '80px',
-            fill: '#FFD93D',
-            fontStyle: 'bold',
-            stroke: '#00FF00',
-            strokeThickness: 8
-        }).setOrigin(0.5);
-        
-        victoryText.setScale(0);
-        this.tweens.add({
-            targets: victoryText,
-            scale: 1,
-            duration: 500,
-            ease: 'Elastic.out'
+        this.time.delayedCall(1800, () => {
+            this.scene.start('GameOverScene', { result: 'lose', char: this.selectedChar, reason: reason });
         });
     }
     
     update() {
-        this.frameCount++;
+        if (this.isGameOver) return;
         
-        if (this.isGameOver || !this.player.active) return;
-        
-        // ===== 摇杆控制移动 =====
-        const speed = this.player.speed;
-        let vx = 0;
-        let vy = 0;
-        
+        // 摇杆移动
         if (this.joystick.active) {
             const dx = this.joystick.stickX - this.joystick.baseX;
             const dy = this.joystick.stickY - this.joystick.baseY;
             const dist = Math.sqrt(dx * dx + dy * dy);
             
             if (dist > 5) {
-                // 归一化并应用速度
-                vx = (dx / this.joystick.maxDist) * speed;
-                vy = (dy / this.joystick.maxDist) * speed;
+                this.player.setVelocity(
+                    (dx / this.joystick.maxDist) * this.player.speed,
+                    (dy / this.joystick.maxDist) * this.player.speed
+                );
             }
+        } else {
+            this.player.setVelocity(0, 0);
         }
         
-        this.player.body.velocity.x = vx;
-        this.player.body.velocity.y = vy;
+        // 限制玩家区域
+        if (this.player.y < 600) { this.player.y = 600; this.player.setVelocityY(0); }
+        if (this.player.y > 940) { this.player.y = 940; this.player.setVelocityY(0); }
         
-        // 限制玩家在底部区域
-        if (this.player.y < 600) {
-            this.player.y = 600;
-            this.player.body.velocity.y = 0;
-        }
-        if (this.player.y > 940) {
-            this.player.y = 940;
-            this.player.body.velocity.y = 0;
-        }
-        
-        // 更新UI
-        this.updateUI();
-        
-        // 每100帧输出一次性能统计
-        if (this.frameCount % 100 === 0) {
-            console.log('📊 性能统计 - 帧:', this.frameCount, 
-                '子弹数:', this.bullets.countActive() + this.enemyBullets.countActive(),
-                '敌人数:', this.enemies.countActive());
-        }
+        // 更新实体
+        this.player.update();
+        this.enemies.getChildren().forEach(e => { if (e.active) e.update(); });
     }
 }

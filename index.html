@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>像素大乱斗：谁能活到最后？</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>像素大乱斗 v2.0</title>
     <style>
         * {
             margin: 0;
@@ -11,47 +11,33 @@
             box-sizing: border-box;
         }
         body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             font-family: 'Microsoft YaHei', sans-serif;
             overflow: hidden;
+            touch-action: none;
         }
         #game-container {
             border-radius: 12px;
-            box-shadow: 0 0 40px rgba(233, 69, 96, 0.5), 0 0 80px rgba(0, 212, 170, 0.3);
-        }
-        .instructions {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #fff;
-            text-align: center;
-            font-size: 14px;
-            opacity: 0.7;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+            box-shadow: 0 0 40px rgba(233, 69, 96, 0.4), 0 0 80px rgba(0, 212, 170, 0.25);
         }
     </style>
-    <!-- Phaser 3 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 </head>
 <body>
     <div id="game-container"></div>
-    <div class="instructions">
-        左半边：虚拟摇杆移动 | 右半边：点击自动射击 | 右下角按钮：释放技能
-    </div>
     
-    <script src="src/data/characters.js?v=5"></script>
-    <script src="src/entities/Bullet.js?v=5"></script>
-    <script src="src/entities/Player.js?v=5"></script>
-    <script src="src/entities/Enemy.js?v=5"></script>
-    <script src="src/scenes/BootScene.js?v=5"></script>
-    <script src="src/scenes/MenuScene.js?v=5"></script>
-    <script src="src/scenes/GameScene.js?v=5"></script>
-    <script src="src/scenes/GameOverScene.js?v=5"></script>
-    <script src="src/main.js?v=5"></script>
+    <script src="src/data/characters.js"></script>
+    <script src="src/entities/Bullet.js"></script>
+    <script src="src/entities/Player.js"></script>
+    <script src="src/entities/Enemy.js"></script>
+    <script src="src/scenes/BootScene.js"></script>
+    <script src="src/scenes/MenuScene.js"></script>
+    <script src="src/scenes/GameScene.js"></script>
+    <script src="src/scenes/GameOverScene.js"></script>
+    <script src="src/main.js"></script>
 </body>
 </html>

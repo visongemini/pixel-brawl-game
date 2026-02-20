@@ -1,127 +1,28 @@
 class Bullet extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, texture, config) {
-        super(scene, x, y, texture);
+    constructor(scene, x, y, damage, color, isEnemy = false) {
+        const key = 'bullet_' + Math.random().toString(36).substr(2, 9);
+        const g = scene.make.graphics({ add: false });
+        g.fillStyle(color, 1);
+        g.fillCircle(5, 5, 5);
+        g.generateTexture(key, 10, 10);
         
-        console.log('Bullet 构造函数被调用!');
+        super(scene, x, y, key);
         
-        // 使用 bulletDamage 避免与 Phaser 内置属性冲突！
-        this.bulletDamage = config.damage || 10;
-        this.speed = config.speed || 400;
-        this.owner = config.owner || null;
-        this.isEnemy = config.isEnemy || false;
-        this.bulletType = config.bulletType || 'normal';
-        this.waveOffset = 0;
-        this.waveAmplitude = config.waveAmplitude || 20;
-        this.waveFrequency = config.waveFrequency || 0.1;
-        this.startX = x;
-        this.startY = y;
-        this.homingTarget = config.homingTarget || null;
-        this.homingStrength = config.homingStrength || 0.05;
+        this.bulletDamage = damage;
+        this.isEnemy = isEnemy;
+        this.lifetime = 3000;
+        this.spawnTime = Date.now();
         
         scene.add.existing(this);
         scene.physics.add.existing(this);
         
-        // 设置子弹外观
-        this.setTint(config.color || 0xFFFFFF);
-        this.setScale(config.scale || 1);
-        
-        // 发光效果
-        if (config.glow) {
-            this.preFX.addGlow(config.color || 0xFFFFFF, 4, 0, false, 0.1, 10);
-        }
-        
-        // 设置速度
-        scene.physics.velocityFromRotation(config.angle, this.speed, this.body.velocity);
-        
-        // 生命周期
-        this.lifespan = config.lifespan || 3000;
-        
-        // 粒子拖尾效果
-        if (config.trail) {
-            this.createTrail(scene, config.color);
-        }
-        
-        console.log('Bullet 创建完成! bulletDamage:', this.bulletDamage);
+        this.setCollideWorldBounds(true);
+        this.setBounce(1);
     }
     
-    createTrail(scene, color) {
-        // 简化的拖尾效果 - 使用场景事件而不是定时器，避免内存泄漏
-        this.trailScene = scene;
-        this.trailColor = color;
-        this.lastTrailTime = 0;
-        this.trailInterval = 50;
-        
-        // 使用场景的 update 事件来创建拖尾
-        this.trailUpdateCallback = () => {
-            if (!this.active) return;
-            
-            const now = this.trailScene.time.now;
-            if (now - this.lastTrailTime >= this.trailInterval) {
-                this.lastTrailTime = now;
-                
-                const trail = this.trailScene.add.circle(this.x, this.y, 3, this.trailColor, 0.5);
-                trail.setDepth(this.depth - 1);
-                this.trailScene.tweens.add({
-                    targets: trail,
-                    alpha: 0,
-                    scale: 0.5,
-                    duration: 300,
-                    onComplete: () => trail.destroy()
-                });
-            }
-        };
-        
-        this.trailScene.events.on('update', this.trailUpdateCallback);
-    }
-    
-    preUpdate(time, delta) {
-        super.preUpdate(time, delta);
-        
-        // 波浪弹道
-        if (this.bulletType === 'wave') {
-            this.waveOffset += this.waveFrequency * delta;
-            const perpendicularX = -Math.sin(this.body.velocity.angle());
-            const perpendicularY = Math.cos(this.body.velocity.angle());
-            const offset = Math.sin(this.waveOffset) * this.waveAmplitude;
-            
-            this.body.velocity.x = Math.cos(this.body.velocity.angle()) * this.speed + perpendicularX * offset * 0.1;
-            this.body.velocity.y = Math.sin(this.body.velocity.angle()) * this.speed + perpendicularY * offset * 0.1;
-        }
-        
-        // 追踪弹
-        if (this.bulletType === 'homing' && this.homingTarget && this.homingTarget.active) {
-            const angleToTarget = Phaser.Math.Angle.Between(
-                this.x, this.y,
-                this.homingTarget.x, this.homingTarget.y
-            );
-            const currentAngle = this.body.velocity.angle();
-            const newAngle = Phaser.Math.Angle.RotateTo(currentAngle, angleToTarget, this.homingStrength);
-            this.scene.physics.velocityFromRotation(newAngle, this.speed, this.body.velocity);
-        }
-        
-        // 生命周期
-        this.lifespan -= delta;
-        if (this.lifespan <= 0) {
-            this.destroy();
-            return;
-        }
-        
-        // 边界检查
-        if (this.x < 0 || this.x > 960 || this.y < 0 || this.y > 640) {
+    update() {
+        if (Date.now() - this.spawnTime > this.lifetime) {
             this.destroy();
         }
-    }
-    
-    destroy() {
-        console.log('Bullet.destroy() 被调用');
-        
-        // 清理拖尾效果
-        if (this.trailScene && this.trailUpdateCallback) {
-            this.trailScene.events.off('update', this.trailUpdateCallback);
-            this.trailUpdateCallback = null;
-            this.trailScene = null;
-        }
-        
-        super.destroy();
     }
 }

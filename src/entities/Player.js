@@ -1,612 +1,125 @@
 class Player extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, characterData) {
-        // 创建一个临时图形作为精灵
-        const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-        graphics.fillStyle(characterData.color, 1);
-        graphics.fillRect(0, 0, 20, 20);
-        graphics.generateTexture('player_' + characterData.id, 20, 20);
+    constructor(scene, x, y, charData) {
+        const key = 'player_' + charData.id;
+        const g = scene.make.graphics({ add: false });
+        g.fillStyle(charData.color, 1);
+        g.fillRect(0, 0, 30, 30);
+        g.generateTexture(key, 30, 30);
         
-        super(scene, x, y, 'player_' + characterData.id);
+        super(scene, x, y, key);
         
-        this.characterData = characterData;
-        this.maxHp = characterData.hp;
-        this.hp = characterData.hp;
-        this.speed = characterData.speed;
-        this.isPlayer = true;
-        
-        // 技能冷却
-        this.skillCooldown = characterData.skill.cooldown;
+        this.charData = charData;
+        this.maxHp = charData.hp;
+        this.hp = charData.hp;
+        this.speed = charData.speed;
+        this.lastFireTime = 0;
         this.lastSkillTime = 0;
         this.isInvincible = false;
-        this.isStunned = false;
         
-        // 添加emoji标识
-        this.emojiText = scene.add.text(0, -18, characterData.emoji, {
-            fontSize: '12px'
-        }).setOrigin(0.5);
-        
-        // 添加名字
-        this.nameText = scene.add.text(0, -28, characterData.name, {
-            fontSize: '7px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        
-        // 血条背景
-        this.hpBg = scene.add.rectangle(0, -35, 25, 4, 0x333333);
-        // 血条
-        this.hpBar = scene.add.rectangle(-12.5, -35, 25, 4, 0x00ff00);
+        // UI
+        this.emoji = scene.add.text(0, -20, charData.emoji, { fontSize: '16px' }).setOrigin(0.5);
+        this.hpBg = scene.add.rectangle(0, -35, 40, 6, 0x333333);
+        this.hpBar = scene.add.rectangle(-20, -35, 40, 6, 0x00ff00);
         this.hpBar.setOrigin(0, 0.5);
-        
-        // 技能冷却指示器
-        this.skillIndicator = scene.add.circle(12.5, -35, 3, 0x00ff00);
         
         scene.add.existing(this);
         scene.physics.add.existing(this);
         
         this.setCollideWorldBounds(true);
-        this.body.setDrag(500);
-        
-        // 更新UI位置
-        this.updateUIPosition();
-        
-        // 发光效果
-        this.preFX.addGlow(characterData.color, 2, 0, false, 0.1, 5);
     }
     
-    updateUIPosition() {
-        this.emojiText.setPosition(this.x, this.y - 18);
-        this.nameText.setPosition(this.x, this.y - 28);
-        this.hpBg.setPosition(this.x, this.y - 35);
-        this.hpBar.setPosition(this.x - 12.5, this.y - 35);
-        this.skillIndicator.setPosition(this.x + 15, this.y - 35);
-    }
-    
-    updateHpBar() {
-        const ratio = this.hp / this.maxHp;
-        this.hpBar.width = 25 * ratio;
+    fire(targetX, targetY) {
+        const now = Date.now();
+        if (now - this.lastFireTime < this.charData.weapon.cooldown) return;
+        this.lastFireTime = now;
         
-        // 根据血量改变颜色
-        if (ratio > 0.6) {
-            this.hpBar.fillColor = 0x00ff00;
-        } else if (ratio > 0.3) {
-            this.hpBar.fillColor = 0xffff00;
-        } else {
-            this.hpBar.fillColor = 0xff0000;
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+        const speed = 400;
+        
+        const spread = this.charData.weapon.spread || 1;
+        for (let i = 0; i < spread; i++) {
+            const spreadAngle = angle + (i - (spread - 1) / 2) * 0.2;
+            const bullet = new Bullet(this.scene, this.x, this.y, this.charData.weapon.damage, this.charData.color);
+            bullet.setVelocity(Math.cos(spreadAngle) * speed, Math.sin(spreadAngle) * speed);
+            this.scene.bullets.add(bullet);
         }
     }
     
-    updateSkillIndicator(time) {
-        const canUseSkill = time - this.lastSkillTime >= this.skillCooldown;
-        this.skillIndicator.fillColor = canUseSkill ? 0x00ff00 : 0xff0000;
+    useSkill(targetX, targetY) {
+        const now = Date.now();
+        if (now - this.lastSkillTime < this.charData.skill.cooldown) return;
+        this.lastSkillTime = now;
+        
+        const skill = this.charData.skill;
+        
+        // 技能特效
+        this.scene.tweens.add({
+            targets: this,
+            scale: 1.3,
+            duration: 100,
+            yoyo: true
+        });
+        
+        // 对最近敌人造成伤害
+        let nearest = null;
+        let nearestDist = Infinity;
+        
+        this.scene.enemies.getChildren().forEach(enemy => {
+            if (!enemy.active) return;
+            const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+            if (dist < nearestDist && dist < 300) {
+                nearestDist = dist;
+                nearest = enemy;
+            }
+        });
+        
+        if (nearest && skill.damage > 0) {
+            nearest.takeDamage(skill.damage);
+        }
+        
+        // 自伤
+        if (skill.selfDamage) {
+            this.hp -= skill.selfDamage;
+            this.updateHpBar();
+        }
+        
+        // 无敌
+        if (skill.effect === 'invincible') {
+            this.isInvincible = true;
+            this.setAlpha(0.5);
+            this.scene.time.delayedCall(skill.duration, () => {
+                this.isInvincible = false;
+                this.setAlpha(1);
+            });
+        }
     }
     
     takeDamage(damage) {
-        if (this.isInvincible) {
-            // 反弹效果
-            return 'reflected';
-        }
-        
+        if (this.isInvincible) return false;
         this.hp -= damage;
         this.updateHpBar();
         
         // 受伤闪烁
         this.scene.tweens.add({
             targets: this,
-            alpha: 0.5,
-            duration: 100,
-            yoyo: true,
-            repeat: 2
-        });
-        
-        if (this.hp <= 0) {
-            this.die();
-        }
-        
-        return 'damaged';
-    }
-    
-    heal(amount) {
-        this.hp = Math.min(this.hp + amount, this.maxHp);
-        this.updateHpBar();
-    }
-    
-    die() {
-        console.log('玩家死亡!');
-        // 死亡特效
-        const particles = this.scene.add.particles(this.x, this.y, 'player_' + this.characterData.id, {
-            speed: { min: 50, max: 200 },
-            scale: { start: 0.5, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 500,
-            quantity: 20,
-            tint: this.characterData.color
-        });
-        
-        this.scene.time.delayedCall(500, () => particles.destroy());
-        
-        this.emojiText.destroy();
-        this.nameText.destroy();
-        this.hpBg.destroy();
-        this.hpBar.destroy();
-        this.skillIndicator.destroy();
-        
-        this.destroy();
-    }
-    
-    fire(targetX, targetY) {
-        console.log('Player.fire() 被调用! 目标:', targetX, targetY);
-        const weapon = this.characterData.weapon;
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-        
-        // 创建视觉子弹（只是特效，不造成伤害）
-        if (weapon.doubleShot) {
-            const offset1 = angle + 0.1;
-            const offset2 = angle - 0.1;
-            this.createVisualBullet(offset1);
-            this.createVisualBullet(offset2);
-        }
-        else if (weapon.scatter) {
-            for (let i = -2; i <= 2; i++) {
-                this.createVisualBullet(angle + i * 0.15);
-            }
-        }
-        else {
-            this.createVisualBullet(angle);
-        }
-        
-        // 直接伤害最近的敌人（类似技能，数值低一些）
-        this.directDamageToNearestEnemy(weapon.damage * 0.8);
-        
-        // 后坐力效果
-        this.scene.tweens.add({
-            targets: this,
-            x: this.x - Math.cos(angle) * 5,
-            y: this.y - Math.sin(angle) * 5,
+            alpha: 0.3,
             duration: 50,
-            yoyo: true
+            yoyo: true,
+            repeat: 3
         });
+        
+        return this.hp <= 0;
     }
     
-    createBullet(angle) {
-        const weapon = this.characterData.weapon;
-        console.log('创建子弹, 武器:', weapon);
-        const bullet = new Bullet(this.scene, this.x, this.y, null, {
-            damage: weapon.damage,
-            speed: weapon.bulletSpeed,
-            color: weapon.bulletColor,
-            scale: weapon.bulletSize / 10,
-            angle: angle,
-            glow: true,
-            trail: true,
-            owner: this,
-            bulletType: weapon.wave ? 'wave' : weapon.homing ? 'homing' : 'normal'
-        });
-        
-        // 圆形碰撞体
-        bullet.body.setCircle(weapon.bulletSize / 2);
-        
-        // 添加到子弹组！
-        if (this.scene.bullets) {
-            console.log('添加子弹到场景子弹组');
-            this.scene.bullets.add(bullet);
-        } else {
-            console.warn('场景子弹组不存在!');
-        }
-        
-        return bullet;
+    updateHpBar() {
+        const ratio = Math.max(0, this.hp / this.maxHp);
+        this.hpBar.width = 40 * ratio;
+        this.hpBar.fillColor = ratio > 0.6 ? 0x00ff00 : ratio > 0.3 ? 0xffff00 : 0xff0000;
     }
     
-    createVisualBullet(angle) {
-        const weapon = this.characterData.weapon;
-        const bullet = new Bullet(this.scene, this.x, this.y, null, {
-            damage: 0, // 视觉子弹不造成伤害
-            speed: weapon.bulletSpeed,
-            color: weapon.bulletColor,
-            scale: weapon.bulletSize / 10,
-            angle: angle,
-            glow: true,
-            trail: true,
-            owner: this,
-            bulletType: weapon.wave ? 'wave' : weapon.homing ? 'homing' : 'normal'
-        });
-        
-        // 圆形碰撞体（但不参与碰撞）
-        bullet.body.setCircle(weapon.bulletSize / 2);
-        
-        return bullet;
-    }
-    
-    directDamageToNearestEnemy(damage) {
-        let nearestEnemy = null;
-        let nearestDist = Infinity;
-        
-        // 找到最近的敌人
-        this.scene.enemies.getChildren().forEach(enemy => {
-            if (!enemy.active) return;
-            const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-            if (dist < nearestDist && dist < 400) { // 限制射程
-                nearestDist = dist;
-                nearestEnemy = enemy;
-            }
-        });
-        
-        // 如果有敌人在射程内，直接造成伤害
-        if (nearestEnemy) {
-            console.log('直接伤害敌人:', nearestEnemy.characterData.name, '伤害:', damage);
-            nearestEnemy.takeDamage(damage);
-            
-            // 击中特效
-            this.createHitEffect(nearestEnemy.x, nearestEnemy.y, nearestEnemy.characterData.color);
-            
-            // 更新UI
-            this.scene.updateUI();
-        }
-    }
-    
-    createHitEffect(x, y, color) {
-        // 爆炸粒子
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const speed = 50 + Math.random() * 50;
-            const particle = this.scene.add.circle(x, y, 2, color);
-            
-            this.scene.tweens.add({
-                targets: particle,
-                x: x + Math.cos(angle) * speed,
-                y: y + Math.sin(angle) * speed,
-                alpha: 0,
-                scale: 0,
-                duration: 300,
-                onComplete: () => particle.destroy()
-            });
-        }
-    }
-    
-    useSkill(targetX, targetY) {
-        console.log('Player.useSkill() 被调用!');
-        const time = this.scene.time.now;
-        if (time - this.lastSkillTime < this.skillCooldown) {
-            console.log('技能冷却中!');
-            return false;
-        }
-        
-        this.lastSkillTime = time;
-        const skill = this.characterData.skill;
-        
-        switch(skill.effect) {
-            case 'slow':
-                this.skillSlow(targetX, targetY);
-                break;
-            case 'teleport':
-                this.skillTeleport(targetX, targetY);
-                break;
-            case 'stun':
-                this.skillStun();
-                break;
-            case 'knockback':
-                this.skillKnockback();
-                break;
-            case 'aoe':
-                this.skillAOE();
-                break;
-            case 'blackout':
-                this.skillBlackout(targetX, targetY);
-                break;
-            case 'invincible':
-                this.skillInvincible();
-                break;
-        }
-        
-        return true;
-    }
-    
-    // Vison - 画大饼
-    skillSlow(targetX, targetY) {
-        const skill = this.characterData.skill;
-        
-        // 大饼特效
-        const pie = this.scene.add.circle(targetX, targetY, 40, skill.color, 0.8);
-        pie.setStrokeStyle(2, 0xFFFFFF);
-        
-        this.scene.tweens.add({
-            targets: pie,
-            scale: { from: 0, to: 1 },
-            alpha: { from: 0.8, to: 0.3 },
-            duration: 300,
-            ease: 'Back.out'
-        });
-        
-        // 范围伤害和减速
-        this.scene.enemies.getChildren().forEach(enemy => {
-            const dist = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y);
-            if (dist < 40) {
-                enemy.takeDamage(skill.damage);
-                enemy.applySlow(skill.duration);
-            }
-        });
-        
-        this.scene.time.delayedCall(skill.duration, () => {
-            this.scene.tweens.add({
-                targets: pie,
-                alpha: 0,
-                scale: 1.5,
-                duration: 200,
-                onComplete: () => pie.destroy()
-            });
-        });
-    }
-    
-    // Matt - 删库跑路
-    skillTeleport(targetX, targetY) {
-        const skill = this.characterData.skill;
-        
-        // 原地爆炸特效（报错弹窗）
-        const errorWindow = this.scene.add.rectangle(this.x, this.y, 50, 30, 0xC0C0C0);
-        errorWindow.setStrokeStyle(1, 0x000000);
-        
-        const errorText = this.scene.add.text(this.x, this.y - 8, '❌ ERROR', {
-            fontSize: '8px',
-            fill: '#000000',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        
-        const errorMsg = this.scene.add.text(this.x, this.y + 5, 'System32 Deleted!', {
-            fontSize: '6px',
-            fill: '#ff0000'
-        }).setOrigin(0.5);
-        
-        // 爆炸伤害
-        this.scene.enemies.getChildren().forEach(enemy => {
-            const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-            if (dist < 50) {
-                enemy.takeDamage(skill.damage);
-            }
-        });
-        
-        // 闪现
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-        const newX = this.x + Math.cos(angle) * skill.range;
-        const newY = this.y + Math.sin(angle) * skill.range;
-        
-        this.setPosition(newX, newY);
-        
-        // 清理报错窗口
-        this.scene.time.delayedCall(500, () => {
-            errorWindow.destroy();
-            errorText.destroy();
-            errorMsg.destroy();
-        });
-    }
-    
-    // Vina - 奶茶轰炸
-    skillStun() {
-        const skill = this.characterData.skill;
-        
-        // 三杯奶茶从天而降
-        for (let i = 0; i < 3; i++) {
-            this.scene.time.delayedCall(i * 200, () => {
-                const targetX = Phaser.Math.Between(200, 760);
-                const targetY = Phaser.Math.Between(100, 300);
-                
-                // 奶茶下落
-                const bubbleTea = this.scene.add.text(targetX, -25, '🧋', {
-                    fontSize: '24px'
-                }).setOrigin(0.5);
-                
-                this.scene.tweens.add({
-                    targets: bubbleTea,
-                    y: targetY,
-                    duration: 500,
-                    ease: 'Bounce.out',
-                    onComplete: () => {
-                        // 溅射效果
-                        const splash = this.scene.add.circle(targetX, targetY, 30, 0x8B4513, 0.5);
-                        
-                        // 范围眩晕
-                        this.scene.enemies.getChildren().forEach(enemy => {
-                            const dist = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y);
-                            if (dist < 30) {
-                                enemy.takeDamage(skill.damage / 3);
-                                enemy.applyStun(skill.duration);
-                            }
-                        });
-                        
-                        this.scene.time.delayedCall(300, () => {
-                            bubbleTea.destroy();
-                            splash.destroy();
-                        });
-                    }
-                });
-            });
-        }
-    }
-    
-    // Coco - 萌力咆哮
-    skillKnockback() {
-        const skill = this.characterData.skill;
-        
-        // 咆哮特效
-        const roar = this.scene.add.text(this.x, this.y - 25, '😺', {
-            fontSize: '32px'
-        }).setOrigin(0.5);
-        
-        // 声波扩散
-        for (let i = 0; i < 3; i++) {
-            this.scene.time.delayedCall(i * 100, () => {
-                const wave = this.scene.add.circle(this.x, this.y, 25 + i * 25, 0xFFFFFF, 0.3);
-                wave.setStrokeStyle(1.5, 0xFFC0CB);
-                
-                this.scene.tweens.add({
-                    targets: wave,
-                    scale: 2,
-                    alpha: 0,
-                    duration: 400,
-                    onComplete: () => wave.destroy()
-                });
-            });
-        }
-        
-        // 震退和伤害
-        this.scene.enemies.getChildren().forEach(enemy => {
-            const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-            if (dist < skill.range) {
-                enemy.takeDamage(skill.damage);
-                
-                // 击退
-                const angle = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
-                enemy.body.velocity.x += Math.cos(angle) * 300;
-                enemy.body.velocity.y += Math.sin(angle) * 300;
-            }
-        });
-        
-        this.scene.time.delayedCall(500, () => roar.destroy());
-    }
-    
-    // Cola - 曼妥思大爆炸
-    skillAOE() {
-        const skill = this.characterData.skill;
-        
-        // 自损
-        this.takeDamage(skill.selfDamage);
-        
-        // 可乐喷射特效
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
-            const endX = this.x + Math.cos(angle) * (skill.range / 2);
-            const endY = this.y + Math.sin(angle) * (skill.range / 2);
-            
-            const beam = this.scene.add.line(this.x, this.y, 0, 0, 
-                Math.cos(angle) * (skill.range / 2), 
-                Math.sin(angle) * (skill.range / 2), 
-                0x00FF7F, 0.8
-            );
-            beam.setLineWidth(4);
-            
-            this.scene.tweens.add({
-                targets: beam,
-                alpha: 0,
-                duration: 300,
-                onComplete: () => beam.destroy()
-            });
-        }
-        
-        // 全屏AOE伤害
-        this.scene.enemies.getChildren().forEach(enemy => {
-            enemy.takeDamage(skill.damage);
-        });
-        
-        // 爆炸粒子
-        const particles = this.scene.add.particles(this.x, this.y, null, {
-            x: this.x,
-            y: this.y,
-            speed: { min: 100, max: 400 },
-            scale: { start: 0.5, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 600,
-            quantity: 30,
-            emitting: false
-        });
-        
-        // 手动创建粒子
-        for (let i = 0; i < 30; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 100 + Math.random() * 300;
-            const particle = this.scene.add.circle(
-                this.x, this.y, 
-                3 + Math.random() * 5, 
-                0x00FF7F
-            );
-            
-            this.scene.tweens.add({
-                targets: particle,
-                x: this.x + Math.cos(angle) * speed,
-                y: this.y + Math.sin(angle) * speed,
-                alpha: 0,
-                scale: 0,
-                duration: 600,
-                onComplete: () => particle.destroy()
-            });
-        }
-    }
-    
-    // Andy - 强行重启
-    skillBlackout(targetX, targetY) {
-        const skill = this.characterData.skill;
-        
-        // 找到最近的敌人
-        let nearestEnemy = null;
-        let nearestDist = Infinity;
-        
-        this.scene.enemies.getChildren().forEach(enemy => {
-            const dist = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y);
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestEnemy = enemy;
-            }
-        });
-        
-        if (nearestEnemy && nearestDist < 200) {
-            // 黑屏特效
-            const blackScreen = this.scene.add.rectangle(
-                nearestEnemy.x, nearestEnemy.y, 30, 30, 0x000000
-            );
-            
-            nearestEnemy.applyStun(skill.duration);
-            
-            this.scene.time.delayedCall(skill.duration, () => {
-                blackScreen.destroy();
-            });
-        }
-    }
-    
-    // Rocky - 坚如磐石
-    skillInvincible() {
-        const skill = this.characterData.skill;
-        
-        this.isInvincible = true;
-        
-        // 变石头特效
-        this.setTint(0x808080);
-        const glasses = this.scene.add.text(this.x, this.y - 5, '🕶️', {
-            fontSize: '10px'
-        }).setOrigin(0.5);
-        
-        // 护盾光环
-        const shield = this.scene.add.circle(this.x, this.y, 17.5, 0xFFFFFF, 0.3);
-        shield.setStrokeStyle(1.5, 0x808080);
-        
-        // 更新护盾位置
-        const updateShield = () => {
-            if (shield.active && this.active) {
-                shield.x = this.x;
-                shield.y = this.y;
-                glasses.x = this.x;
-                glasses.y = this.y - 10;
-            }
-        };
-        
-        this.scene.events.on('update', updateShield);
-        
-        this.scene.time.delayedCall(skill.duration, () => {
-            this.isInvincible = false;
-            this.clearTint();
-            glasses.destroy();
-            shield.destroy();
-            this.scene.events.off('update', updateShield);
-        });
-    }
-    
-    preUpdate(time, delta) {
-        super.preUpdate(time, delta);
-        
-        this.updateUIPosition();
-        this.updateSkillIndicator(time);
-        
-        // 玩家限制在底部
-        if (this.y < 320) {
-            this.y = 320;
-            this.body.velocity.y = 0;
-        }
+    update() {
+        this.emoji.setPosition(this.x, this.y - 20);
+        this.hpBg.setPosition(this.x, this.y - 35);
+        this.hpBar.setPosition(this.x - 20, this.y - 35);
     }
 }

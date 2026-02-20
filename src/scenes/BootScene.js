@@ -1,116 +1,44 @@
 class BootScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'BootScene' });
+        super('BootScene');
     }
     
     preload() {
-        // 创建像素纹理
-        this.createPixelTextures();
-        
-        // 创建子弹纹理
-        this.createBulletTexture();
-        
-        // 创建粒子纹理
-        this.createParticleTexture();
-        
         // 创建背景纹理
-        this.createBackgroundTexture();
+        const g = this.make.graphics({ add: false });
         
-        // 加载音效（使用占位符，实际项目可替换为真实音效）
-        // this.load.audio('shoot', 'assets/sounds/shoot.mp3');
-        // this.load.audio('explosion', 'assets/sounds/explosion.mp3');
-        // this.load.audio('skill', 'assets/sounds/skill.mp3');
-        // this.load.audio('bgm', 'assets/sounds/bgm.mp3');
-    }
-    
-    createPixelTextures() {
-        // 创建角色占位符纹理
-        const characters = ['vison', 'matt', 'vina', 'coco', 'cola', 'andy', 'rocky'];
-        const colors = [0xFF6B6B, 0x4ECDC4, 0xFF8B94, 0xFFA07A, 0x98FB98, 0x87CEEB, 0xDDA0DD];
+        // 背景
+        g.fillStyle(0x1a1a2e, 1);
+        g.fillRect(0, 0, 640, 960);
         
-        characters.forEach((char, index) => {
-            const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-            
-            // 绘制像素风格的角色
-            graphics.fillStyle(colors[index], 1);
-            graphics.fillRect(0, 0, 40, 40);
-            
-            // 添加像素细节
-            graphics.fillStyle(0xFFFFFF, 0.5);
-            graphics.fillRect(5, 5, 8, 8);
-            graphics.fillRect(27, 5, 8, 8);
-            graphics.fillRect(10, 25, 20, 8);
-            
-            // 边框
-            graphics.lineStyle(2, 0x000000, 0.3);
-            graphics.strokeRect(0, 0, 40, 40);
-            
-            graphics.generateTexture('char_' + char, 40, 40);
-        });
-    }
-    
-    createBulletTexture() {
-        const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-        graphics.fillStyle(0xFFFFFF, 1);
-        graphics.fillCircle(8, 8, 8);
-        graphics.generateTexture('bullet', 16, 16);
-    }
-    
-    createParticleTexture() {
-        const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-        graphics.fillStyle(0xFFFFFF, 1);
-        graphics.fillRect(0, 0, 8, 8);
-        graphics.generateTexture('particle', 8, 8);
-    }
-    
-    createBackgroundTexture() {
-        // 创建像素风格背景
-        const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-        
-        // 深色背景
-        graphics.fillStyle(0x1a1a2e, 1);
-        graphics.fillRect(0, 0, 640, 960);
-        
-        // 网格线
-        graphics.lineStyle(1, 0x333333, 0.5);
+        // 网格
+        g.lineStyle(1, 0x333333, 0.5);
         for (let x = 0; x < 640; x += 40) {
-            graphics.moveTo(x, 0);
-            graphics.lineTo(x, 960);
+            g.moveTo(x, 0);
+            g.lineTo(x, 960);
         }
         for (let y = 0; y < 960; y += 40) {
-            graphics.moveTo(0, y);
-            graphics.lineTo(640, y);
+            g.moveTo(0, y);
+            g.lineTo(640, y);
         }
-        graphics.strokePath();
+        g.strokePath();
         
-        // 装饰性的像素星星
-        graphics.fillStyle(0xFFFFFF, 0.8);
+        // 星星
+        g.fillStyle(0xffffff, 0.8);
         for (let i = 0; i < 50; i++) {
-            const x = Math.random() * 640;
-            const y = Math.random() * 960;
-            graphics.fillRect(x, y, 2, 2);
+            g.fillRect(Math.random() * 640, Math.random() * 960, 2, 2);
         }
         
-        graphics.generateTexture('background', 640, 960);
+        g.generateTexture('background', 640, 960);
     }
     
     create() {
-        // 添加加载动画
-        const loadingText = this.add.text(320, 480, 'Loading...', {
-            fontSize: '32px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
+        this.add.text(320, 480, '加载中...', { 
+            fontSize: '32px', fill: '#fff', fontStyle: 'bold' 
         }).setOrigin(0.5);
         
-        this.tweens.add({
-            targets: loadingText,
-            alpha: 0.5,
-            duration: 500,
-            yoyo: true,
-            repeat: 2,
-            onComplete: () => {
-                this.scene.start('MenuScene');
-            }
+        this.time.delayedCall(500, () => {
+            this.scene.start('MenuScene');
         });
     }
 }
