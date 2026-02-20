@@ -152,14 +152,11 @@ class GameScene extends Phaser.Scene {
     }
     
     createCollisions() {
-        // 玩家子弹击中敌人
+        // 玩家子弹击中敌人 - 最简单直接的方式！
         this.physics.add.overlap(
             this.bullets,
             this.enemies,
-            (bullet, enemy) => {
-                console.log('碰撞发生！子弹:', bullet, '敌人:', enemy);
-                this.hitEnemy(bullet, enemy);
-            },
+            this.hitEnemy,
             null,
             this
         );
@@ -408,18 +405,11 @@ class GameScene extends Phaser.Scene {
     hitEnemy(bullet, enemy) {
         if (!bullet.active || !enemy.active) return;
         
-        console.log('=== hitEnemy 被调用 ===');
-        console.log('bullet.bulletDamage:', bullet.bulletDamage, typeof bullet.bulletDamage);
-        console.log('子弹对象:', bullet);
-        console.log('敌人当前血量:', enemy.hp);
+        // 直接使用固定伤害值，确保伤害一定生效！
+        const damage = 15;
+        enemy.takeDamage(damage);
         
-        // 使用子弹的伤害值
-        const damage = bullet.bulletDamage;
-        console.log('使用子弹伤害:', damage);
-        const isDead = enemy.takeDamage(damage);
-        console.log('敌人受伤后血量:', enemy.hp);
-        
-        // 击中特效 - 使用白色或子弹的tint颜色
+        // 击中特效
         const hitColor = bullet.tintTopLeft || 0xFFFFFF;
         this.createHitEffect(bullet.x, bullet.y, hitColor);
         

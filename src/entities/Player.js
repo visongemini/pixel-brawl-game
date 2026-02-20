@@ -166,7 +166,6 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     
     createBullet(angle) {
         const weapon = this.characterData.weapon;
-        console.log('创建子弹！武器伤害:', weapon.damage, '武器:', weapon);
         const bullet = new Bullet(this.scene, this.x, this.y, null, {
             damage: weapon.damage,
             speed: weapon.bulletSpeed,
@@ -178,7 +177,6 @@ class Player extends Phaser.Physics.Arcade.Sprite {
             owner: this,
             bulletType: weapon.wave ? 'wave' : weapon.homing ? 'homing' : 'normal'
         });
-        console.log('子弹创建完成，子弹伤害:', bullet.bulletDamage);
         
         // 圆形碰撞体
         bullet.body.setCircle(weapon.bulletSize / 2);
