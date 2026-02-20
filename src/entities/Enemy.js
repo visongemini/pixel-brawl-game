@@ -4,8 +4,8 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         const textureKey = 'enemy_' + characterData.id + '_' + Math.random().toString(36).substr(2, 9);
         const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
         graphics.fillStyle(characterData.color, 1);
-        graphics.fillRect(0, 0, 40, 40);
-        graphics.generateTexture(textureKey, 40, 40);
+        graphics.fillRect(0, 0, 20, 20);
+        graphics.generateTexture(textureKey, 20, 20);
         
         super(scene, x, y, textureKey);
         
@@ -32,18 +32,18 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.aiAggression = 1.3;
         
         // UI元素
-        this.emojiText = scene.add.text(0, -35, characterData.emoji, {
-            fontSize: '24px'
+        this.emojiText = scene.add.text(0, -18, characterData.emoji, {
+            fontSize: '12px'
         }).setOrigin(0.5);
         
-        this.nameText = scene.add.text(0, -55, characterData.name, {
-            fontSize: '14px',
+        this.nameText = scene.add.text(0, -28, characterData.name, {
+            fontSize: '7px',
             fill: '#ffffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         
-        this.hpBg = scene.add.rectangle(0, -70, 50, 8, 0x333333);
-        this.hpBar = scene.add.rectangle(-25, -70, 50, 8, 0xff0000);
+        this.hpBg = scene.add.rectangle(0, -35, 25, 4, 0x333333);
+        this.hpBar = scene.add.rectangle(-12.5, -35, 25, 4, 0xff0000);
         this.hpBar.setOrigin(0, 0.5);
         
         // 状态图标
@@ -76,15 +76,15 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     
     updateUIPosition() {
-        this.emojiText.setPosition(this.x, this.y - 35);
-        this.nameText.setPosition(this.x, this.y - 55);
-        this.hpBg.setPosition(this.x, this.y - 70);
-        this.hpBar.setPosition(this.x - 25, this.y - 70);
+        this.emojiText.setPosition(this.x, this.y - 18);
+        this.nameText.setPosition(this.x, this.y - 28);
+        this.hpBg.setPosition(this.x, this.y - 35);
+        this.hpBar.setPosition(this.x - 12.5, this.y - 35);
     }
     
     updateHpBar() {
         const ratio = Math.max(0, this.hp / this.maxHp);
-        this.hpBar.width = 50 * ratio;
+        this.hpBar.width = 25 * ratio;
     }
     
     takeDamage(damage) {
@@ -116,12 +116,12 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     
     showDamageNumber(damage) {
-        const damageText = this.scene.add.text(this.x, this.y - 80, `-${damage}`, {
-            fontSize: '20px',
+        const damageText = this.scene.add.text(this.x, this.y - 40, `-${damage}`, {
+            fontSize: '10px',
             fill: '#ff0000',
             fontStyle: 'bold',
             stroke: '#ffffff',
-            strokeThickness: 3
+            strokeThickness: 1.5
         }).setOrigin(0.5);
         
         this.scene.tweens.add({
@@ -139,8 +139,8 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0x4444ff);
         
         // 添加减速图标
-        const slowIcon = this.scene.add.text(this.x + 30, this.y - 70, '🐌', {
-            fontSize: '16px'
+        const slowIcon = this.scene.add.text(this.x + 15, this.y - 35, '🐌', {
+            fontSize: '8px'
         }).setOrigin(0.5);
         this.statusIcons.add(slowIcon);
         
@@ -158,8 +158,8 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xffff00);
         
         // 添加眩晕图标
-        const stunIcon = this.scene.add.text(this.x + 30, this.y - 70, '💫', {
-            fontSize: '16px'
+        const stunIcon = this.scene.add.text(this.x + 15, this.y - 35, '💫', {
+            fontSize: '8px'
         }).setOrigin(0.5);
         this.statusIcons.add(stunIcon);
         
@@ -167,10 +167,10 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         const stars = [];
         for (let i = 0; i < 3; i++) {
             const star = this.scene.add.text(
-                this.x + (i - 1) * 20, 
-                this.y - 90, 
+                this.x + (i - 1) * 10, 
+                this.y - 45, 
                 '⭐', 
-                { fontSize: '20px' }
+                { fontSize: '10px' }
             ).setOrigin(0.5);
             stars.push(star);
         }
@@ -189,7 +189,7 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         for (let i = 0; i < 15; i++) {
             const particle = this.scene.add.rectangle(
                 this.x, this.y,
-                8, 8,
+                4, 4,
                 this.characterData.color
             );
             const angle = (i / 15) * Math.PI * 2;
@@ -315,12 +315,12 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         const skill = this.characterData.skill;
         
         // 技能特效
-        const skillText = this.scene.add.text(this.x, this.y - 90, skill.name, {
-            fontSize: '16px',
+        const skillText = this.scene.add.text(this.x, this.y - 45, skill.name, {
+            fontSize: '8px',
             fill: '#ffff00',
             fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 1.5
         }).setOrigin(0.5);
         
         this.scene.tweens.add({
@@ -408,8 +408,8 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         
         // 更新状态图标位置
         this.statusIcons.getChildren().forEach((icon, index) => {
-            icon.x = this.x + 30 + index * 20;
-            icon.y = this.y - 70;
+            icon.x = this.x + 15 + index * 10;
+            icon.y = this.y - 35;
         });
     }
 }

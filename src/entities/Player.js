@@ -3,8 +3,8 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         // 创建一个临时图形作为精灵
         const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
         graphics.fillStyle(characterData.color, 1);
-        graphics.fillRect(0, 0, 40, 40);
-        graphics.generateTexture('player_' + characterData.id, 40, 40);
+        graphics.fillRect(0, 0, 20, 20);
+        graphics.generateTexture('player_' + characterData.id, 20, 20);
         
         super(scene, x, y, 'player_' + characterData.id);
         
@@ -21,25 +21,25 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         this.isStunned = false;
         
         // 添加emoji标识
-        this.emojiText = scene.add.text(0, -35, characterData.emoji, {
-            fontSize: '24px'
+        this.emojiText = scene.add.text(0, -18, characterData.emoji, {
+            fontSize: '12px'
         }).setOrigin(0.5);
         
         // 添加名字
-        this.nameText = scene.add.text(0, -55, characterData.name, {
-            fontSize: '14px',
+        this.nameText = scene.add.text(0, -28, characterData.name, {
+            fontSize: '7px',
             fill: '#ffffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         
         // 血条背景
-        this.hpBg = scene.add.rectangle(0, -70, 50, 8, 0x333333);
+        this.hpBg = scene.add.rectangle(0, -35, 25, 4, 0x333333);
         // 血条
-        this.hpBar = scene.add.rectangle(-25, -70, 50, 8, 0x00ff00);
+        this.hpBar = scene.add.rectangle(-12.5, -35, 25, 4, 0x00ff00);
         this.hpBar.setOrigin(0, 0.5);
         
         // 技能冷却指示器
-        this.skillIndicator = scene.add.circle(25, -70, 6, 0x00ff00);
+        this.skillIndicator = scene.add.circle(12.5, -35, 3, 0x00ff00);
         
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -55,16 +55,16 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     }
     
     updateUIPosition() {
-        this.emojiText.setPosition(this.x, this.y - 35);
-        this.nameText.setPosition(this.x, this.y - 55);
-        this.hpBg.setPosition(this.x, this.y - 70);
-        this.hpBar.setPosition(this.x - 25, this.y - 70);
-        this.skillIndicator.setPosition(this.x + 30, this.y - 70);
+        this.emojiText.setPosition(this.x, this.y - 18);
+        this.nameText.setPosition(this.x, this.y - 28);
+        this.hpBg.setPosition(this.x, this.y - 35);
+        this.hpBar.setPosition(this.x - 12.5, this.y - 35);
+        this.skillIndicator.setPosition(this.x + 15, this.y - 35);
     }
     
     updateHpBar() {
         const ratio = this.hp / this.maxHp;
-        this.hpBar.width = 50 * ratio;
+        this.hpBar.width = 25 * ratio;
         
         // 根据血量改变颜色
         if (ratio > 0.6) {
@@ -238,8 +238,8 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         const skill = this.characterData.skill;
         
         // 大饼特效
-        const pie = this.scene.add.circle(targetX, targetY, 80, skill.color, 0.8);
-        pie.setStrokeStyle(4, 0xFFFFFF);
+        const pie = this.scene.add.circle(targetX, targetY, 40, skill.color, 0.8);
+        pie.setStrokeStyle(2, 0xFFFFFF);
         
         this.scene.tweens.add({
             targets: pie,
@@ -252,7 +252,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         // 范围伤害和减速
         this.scene.enemies.getChildren().forEach(enemy => {
             const dist = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y);
-            if (dist < 80) {
+            if (dist < 40) {
                 enemy.takeDamage(skill.damage);
                 enemy.applySlow(skill.duration);
             }
@@ -274,24 +274,24 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         const skill = this.characterData.skill;
         
         // 原地爆炸特效（报错弹窗）
-        const errorWindow = this.scene.add.rectangle(this.x, this.y, 100, 60, 0xC0C0C0);
-        errorWindow.setStrokeStyle(2, 0x000000);
+        const errorWindow = this.scene.add.rectangle(this.x, this.y, 50, 30, 0xC0C0C0);
+        errorWindow.setStrokeStyle(1, 0x000000);
         
-        const errorText = this.scene.add.text(this.x, this.y - 15, '❌ ERROR', {
-            fontSize: '16px',
+        const errorText = this.scene.add.text(this.x, this.y - 8, '❌ ERROR', {
+            fontSize: '8px',
             fill: '#000000',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         
-        const errorMsg = this.scene.add.text(this.x, this.y + 10, 'System32 Deleted!', {
-            fontSize: '12px',
+        const errorMsg = this.scene.add.text(this.x, this.y + 5, 'System32 Deleted!', {
+            fontSize: '6px',
             fill: '#ff0000'
         }).setOrigin(0.5);
         
         // 爆炸伤害
         this.scene.enemies.getChildren().forEach(enemy => {
             const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-            if (dist < 100) {
+            if (dist < 50) {
                 enemy.takeDamage(skill.damage);
             }
         });
@@ -322,8 +322,8 @@ class Player extends Phaser.Physics.Arcade.Sprite {
                 const targetY = Phaser.Math.Between(100, 300);
                 
                 // 奶茶下落
-                const bubbleTea = this.scene.add.text(targetX, -50, '🧋', {
-                    fontSize: '48px'
+                const bubbleTea = this.scene.add.text(targetX, -25, '🧋', {
+                    fontSize: '24px'
                 }).setOrigin(0.5);
                 
                 this.scene.tweens.add({
@@ -333,12 +333,12 @@ class Player extends Phaser.Physics.Arcade.Sprite {
                     ease: 'Bounce.out',
                     onComplete: () => {
                         // 溅射效果
-                        const splash = this.scene.add.circle(targetX, targetY, 60, 0x8B4513, 0.5);
+                        const splash = this.scene.add.circle(targetX, targetY, 30, 0x8B4513, 0.5);
                         
                         // 范围眩晕
                         this.scene.enemies.getChildren().forEach(enemy => {
                             const dist = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y);
-                            if (dist < 60) {
+                            if (dist < 30) {
                                 enemy.takeDamage(skill.damage / 3);
                                 enemy.applyStun(skill.duration);
                             }
@@ -359,15 +359,15 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         const skill = this.characterData.skill;
         
         // 咆哮特效
-        const roar = this.scene.add.text(this.x, this.y - 50, '😺', {
-            fontSize: '64px'
+        const roar = this.scene.add.text(this.x, this.y - 25, '😺', {
+            fontSize: '32px'
         }).setOrigin(0.5);
         
         // 声波扩散
         for (let i = 0; i < 3; i++) {
             this.scene.time.delayedCall(i * 100, () => {
-                const wave = this.scene.add.circle(this.x, this.y, 50 + i * 50, 0xFFFFFF, 0.3);
-                wave.setStrokeStyle(3, 0xFFC0CB);
+                const wave = this.scene.add.circle(this.x, this.y, 25 + i * 25, 0xFFFFFF, 0.3);
+                wave.setStrokeStyle(1.5, 0xFFC0CB);
                 
                 this.scene.tweens.add({
                     targets: wave,
@@ -405,15 +405,15 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         // 可乐喷射特效
         for (let i = 0; i < 12; i++) {
             const angle = (i / 12) * Math.PI * 2;
-            const endX = this.x + Math.cos(angle) * skill.range;
-            const endY = this.y + Math.sin(angle) * skill.range;
+            const endX = this.x + Math.cos(angle) * (skill.range / 2);
+            const endY = this.y + Math.sin(angle) * (skill.range / 2);
             
             const beam = this.scene.add.line(this.x, this.y, 0, 0, 
-                Math.cos(angle) * skill.range, 
-                Math.sin(angle) * skill.range, 
+                Math.cos(angle) * (skill.range / 2), 
+                Math.sin(angle) * (skill.range / 2), 
                 0x00FF7F, 0.8
             );
-            beam.setLineWidth(8);
+            beam.setLineWidth(4);
             
             this.scene.tweens.add({
                 targets: beam,
@@ -481,7 +481,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         if (nearestEnemy && nearestDist < 200) {
             // 黑屏特效
             const blackScreen = this.scene.add.rectangle(
-                nearestEnemy.x, nearestEnemy.y, 60, 60, 0x000000
+                nearestEnemy.x, nearestEnemy.y, 30, 30, 0x000000
             );
             
             nearestEnemy.applyStun(skill.duration);
@@ -500,13 +500,13 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         
         // 变石头特效
         this.setTint(0x808080);
-        const glasses = this.scene.add.text(this.x, this.y - 10, '🕶️', {
-            fontSize: '20px'
+        const glasses = this.scene.add.text(this.x, this.y - 5, '🕶️', {
+            fontSize: '10px'
         }).setOrigin(0.5);
         
         // 护盾光环
-        const shield = this.scene.add.circle(this.x, this.y, 35, 0xFFFFFF, 0.3);
-        shield.setStrokeStyle(3, 0x808080);
+        const shield = this.scene.add.circle(this.x, this.y, 17.5, 0xFFFFFF, 0.3);
+        shield.setStrokeStyle(1.5, 0x808080);
         
         // 更新护盾位置
         const updateShield = () => {
