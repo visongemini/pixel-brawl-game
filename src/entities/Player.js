@@ -139,22 +139,24 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         const weapon = this.characterData.weapon;
         const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
         
-        // 双发
+        // 创建视觉子弹（只是特效，不造成伤害）
         if (weapon.doubleShot) {
             const offset1 = angle + 0.1;
             const offset2 = angle - 0.1;
-            this.createBullet(offset1);
-            this.createBullet(offset2);
+            this.createVisualBullet(offset1);
+            this.createVisualBullet(offset2);
         }
-        // 散射
         else if (weapon.scatter) {
             for (let i = -2; i <= 2; i++) {
-                this.createBullet(angle + i * 0.15);
+                this.createVisualBullet(angle + i * 0.15);
             }
         }
         else {
-            this.createBullet(angle);
+            this.createVisualBullet(angle);
         }
+        
+        // 直接伤害最近的敌人（类似技能，数值低一些）
+        this.directDamageToNearestEnemy(weapon.damage * 0.8);
         
         // 后坐力效果
         this.scene.tweens.add({
@@ -193,6 +195,72 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         }
         
         return bullet;
+    }
+    
+    createVisualBullet(angle) {
+        const weapon = this.characterData.weapon;
+        const bullet = new Bullet(this.scene, this.x, this.y, null, {
+            damage: 0, // 视觉子弹不造成伤害
+            speed: weapon.bulletSpeed,
+            color: weapon.bulletColor,
+            scale: weapon.bulletSize / 10,
+            angle: angle,
+            glow: true,
+            trail: true,
+            owner: this,
+            bulletType: weapon.wave ? 'wave' : weapon.homing ? 'homing' : 'normal'
+        });
+        
+        // 圆形碰撞体（但不参与碰撞）
+        bullet.body.setCircle(weapon.bulletSize / 2);
+        
+        return bullet;
+    }
+    
+    directDamageToNearestEnemy(damage) {
+        let nearestEnemy = null;
+        let nearestDist = Infinity;
+        
+        // 找到最近的敌人
+        this.scene.enemies.getChildren().forEach(enemy => {
+            if (!enemy.active) return;
+            const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+            if (dist < nearestDist && dist < 400) { // 限制射程
+                nearestDist = dist;
+                nearestEnemy = enemy;
+            }
+        });
+        
+        // 如果有敌人在射程内，直接造成伤害
+        if (nearestEnemy) {
+            console.log('直接伤害敌人:', nearestEnemy.characterData.name, '伤害:', damage);
+            nearestEnemy.takeDamage(damage);
+            
+            // 击中特效
+            this.createHitEffect(nearestEnemy.x, nearestEnemy.y, nearestEnemy.characterData.color);
+            
+            // 更新UI
+            this.scene.updateUI();
+        }
+    }
+    
+    createHitEffect(x, y, color) {
+        // 爆炸粒子
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const speed = 50 + Math.random() * 50;
+            const particle = this.scene.add.circle(x, y, 2, color);
+            
+            this.scene.tweens.add({
+                targets: particle,
+                x: x + Math.cos(angle) * speed,
+                y: y + Math.sin(angle) * speed,
+                alpha: 0,
+                scale: 0,
+                duration: 300,
+                onComplete: () => particle.destroy()
+            });
+        }
     }
     
     useSkill(targetX, targetY) {
