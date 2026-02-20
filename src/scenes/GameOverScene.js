@@ -12,7 +12,7 @@ class GameOverScene extends Phaser.Scene {
     
     create() {
         // 背景
-        this.add.image(480, 320, 'background');
+        this.add.image(320, 480, 'background');
         
         // 根据结果显示不同内容
         if (this.result === 'win') {
@@ -30,8 +30,8 @@ class GameOverScene extends Phaser.Scene {
     
     createVictoryScreen() {
         // 大标题
-        const title = this.add.text(480, 100, '🎉 胜利! 🎉', {
-            fontSize: '64px',
+        const title = this.add.text(320, 120, '🎉 胜利! 🎉', {
+            fontSize: '56px',
             fill: '#FFD93D',
             fontStyle: 'bold',
             stroke: '#00FF00',
@@ -46,11 +46,11 @@ class GameOverScene extends Phaser.Scene {
         });
         
         // 角色展示
-        const charSprite = this.add.image(480, 250, 'char_' + this.character.id);
+        const charSprite = this.add.image(320, 300, 'char_' + this.character.id);
         charSprite.setScale(2);
         
         // 发光效果
-        const glow = this.add.circle(480, 250, 60, 0xFFD93D, 0.3);
+        const glow = this.add.circle(320, 300, 60, 0xFFD93D, 0.3);
         this.tweens.add({
             targets: glow,
             scale: 1.5,
@@ -60,15 +60,15 @@ class GameOverScene extends Phaser.Scene {
         });
         
         // 角色名字
-        this.add.text(480, 330, `${this.character.emoji} ${this.character.name}`, {
-            fontSize: '32px',
+        this.add.text(320, 400, `${this.character.emoji} ${this.character.name}`, {
+            fontSize: '28px',
             fill: '#ffffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         
         // 胜利信息
-        this.add.text(480, 380, `剩余时间: ${this.timeLeft}秒`, {
-            fontSize: '24px',
+        this.add.text(320, 450, `剩余时间: ${this.timeLeft}秒`, {
+            fontSize: '22px',
             fill: '#4ECDC4'
         }).setOrigin(0.5);
         
@@ -89,12 +89,12 @@ class GameOverScene extends Phaser.Scene {
             comment = '险胜! 下次要更加小心!';
         }
         
-        this.add.text(480, 430, rating, {
-            fontSize: '40px'
+        this.add.text(320, 510, rating, {
+            fontSize: '36px'
         }).setOrigin(0.5);
         
-        this.add.text(480, 480, comment, {
-            fontSize: '20px',
+        this.add.text(320, 570, comment, {
+            fontSize: '18px',
             fill: '#FF8B94',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -102,8 +102,8 @@ class GameOverScene extends Phaser.Scene {
     
     createDefeatScreen() {
         // 大标题
-        const title = this.add.text(480, 100, '💀 失败 💀', {
-            fontSize: '64px',
+        const title = this.add.text(320, 120, '💀 失败 💀', {
+            fontSize: '56px',
             fill: '#FF6B6B',
             fontStyle: 'bold',
             stroke: '#000000',
@@ -112,7 +112,7 @@ class GameOverScene extends Phaser.Scene {
         
         this.tweens.add({
             targets: title,
-            y: 110,
+            y: 130,
             duration: 1000,
             yoyo: true,
             repeat: -1,
@@ -120,13 +120,13 @@ class GameOverScene extends Phaser.Scene {
         });
         
         // 角色展示（灰度）
-        const charSprite = this.add.image(480, 250, 'char_' + this.character.id);
+        const charSprite = this.add.image(320, 300, 'char_' + this.character.id);
         charSprite.setScale(2);
         charSprite.setTint(0x666666);
         
         // 角色名字
-        this.add.text(480, 330, `${this.character.emoji} ${this.character.name}`, {
-            fontSize: '32px',
+        this.add.text(320, 400, `${this.character.emoji} ${this.character.name}`, {
+            fontSize: '28px',
             fill: '#888888',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -136,8 +136,8 @@ class GameOverScene extends Phaser.Scene {
             ? '⏰ 时间到! 还有敌人存活'
             : '💔 你的血量耗尽了';
         
-        this.add.text(480, 380, reasonText, {
-            fontSize: '24px',
+        this.add.text(320, 450, reasonText, {
+            fontSize: '22px',
             fill: '#FF6B6B'
         }).setOrigin(0.5);
         
@@ -152,13 +152,13 @@ class GameOverScene extends Phaser.Scene {
         
         const comment = Phaser.Utils.Array.GetRandom(encouragements);
         
-        this.add.text(480, 430, comment, {
-            fontSize: '20px',
+        this.add.text(320, 510, comment, {
+            fontSize: '18px',
             fill: '#aaaaaa'
         }).setOrigin(0.5);
         
         // 死亡统计
-        this.add.text(480, 480, '建议: 多使用技能，注意躲避', {
+        this.add.text(320, 570, '建议: 多使用技能，注意躲避', {
             fontSize: '16px',
             fill: '#4ECDC4'
         }).setOrigin(0.5);
@@ -166,7 +166,7 @@ class GameOverScene extends Phaser.Scene {
     
     createButtons() {
         // 再来一局按钮
-        const restartBtn = this.add.container(350, 560);
+        const restartBtn = this.add.container(320, 700);
         
         const restartBg = this.add.rectangle(0, 0, 160, 50, 0x4ECDC4);
         restartBg.setStrokeStyle(3, 0xFFFFFF);
@@ -207,7 +207,7 @@ class GameOverScene extends Phaser.Scene {
         });
         
         // 选择角色按钮
-        const menuBtn = this.add.container(610, 560);
+        const menuBtn = this.add.container(320, 780);
         
         const menuBg = this.add.rectangle(0, 0, 160, 50, 0xFF6B6B);
         menuBg.setStrokeStyle(3, 0xFFFFFF);
@@ -255,8 +255,8 @@ class GameOverScene extends Phaser.Scene {
             : ['💀', '😢', '💔', '😔', '🥀'];
         
         for (let i = 0; i < 8; i++) {
-            const x = Phaser.Math.Between(50, 910);
-            const y = Phaser.Math.Between(150, 500);
+            const x = Phaser.Math.Between(50, 590);
+            const y = Phaser.Math.Between(200, 700);
             const emoji = this.add.text(x, y, Phaser.Utils.Array.GetRandom(emojis), {
                 fontSize: '32px',
                 alpha: 0.5

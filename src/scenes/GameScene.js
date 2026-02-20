@@ -14,10 +14,10 @@ class GameScene extends Phaser.Scene {
         console.log('=== GameScene.create 开始 ===');
         
         // 背景
-        this.add.image(480, 320, 'background');
+        this.add.image(320, 480, 'background');
         
         // 物理世界边界
-        this.physics.world.setBounds(0, 0, 960, 640);
+        this.physics.world.setBounds(0, 0, 640, 960);
         
         // ===== 先创建子弹组！必须在碰撞设置之前 =====
         this.createInputs();
@@ -45,7 +45,7 @@ class GameScene extends Phaser.Scene {
     
     createPlayer() {
         console.log('创建玩家:', this.selectedCharacter.name);
-        this.player = new Player(this, 480, 550, this.selectedCharacter);
+        this.player = new Player(this, 320, 850, this.selectedCharacter);
         this.player.setDepth(10);
         
         // 出生特效
@@ -70,8 +70,8 @@ class GameScene extends Phaser.Scene {
         
         // 随机位置生成敌人
         enemyChars.forEach((char, index) => {
-            const x = 100 + (index % 3) * 300 + Phaser.Math.Between(-50, 50);
-            const y = 80 + Math.floor(index / 3) * 120 + Phaser.Math.Between(-30, 30);
+            const x = 80 + (index % 3) * 220 + Phaser.Math.Between(-40, 40);
+            const y = 120 + Math.floor(index / 3) * 150 + Phaser.Math.Between(-30, 30);
             
             console.log(`创建敌人 ${index + 1}:`, char.name, '在', x, y);
             const enemy = new Enemy(this, x, y, char, this.player);
@@ -92,14 +92,14 @@ class GameScene extends Phaser.Scene {
     
     createUI() {
         // 版本号（右上角）
-        this.add.text(910, 20, 'v1.6', {
+        this.add.text(620, 20, 'v1.7', {
             fontSize: '16px',
             fill: '#888888',
             fontStyle: 'bold'
         }).setOrigin(1, 0);
         
         // 倒计时
-        this.timerText = this.add.text(480, 30, '180', {
+        this.timerText = this.add.text(320, 40, '180', {
             fontSize: '48px',
             fill: '#FFD93D',
             fontStyle: 'bold',
@@ -108,13 +108,13 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // 倒计时标签
-        this.add.text(480, 65, '秒', {
+        this.add.text(320, 75, '秒', {
             fontSize: '16px',
             fill: '#ffffff'
         }).setOrigin(0.5);
         
         // 剩余敌人
-        this.enemyText = this.add.text(50, 30, `敌人: ${this.enemies.countActive()}`, {
+        this.enemyText = this.add.text(30, 30, `敌人: ${this.enemies.countActive()}`, {
             fontSize: '20px',
             fill: '#FF6B6B',
             fontStyle: 'bold',
@@ -123,7 +123,7 @@ class GameScene extends Phaser.Scene {
         });
         
         // 技能提示
-        this.skillHint = this.add.text(480, 600, `【点击右下角按钮】${this.selectedCharacter.skill.name}`, {
+        this.skillHint = this.add.text(320, 900, `【点击右下角按钮】${this.selectedCharacter.skill.name}`, {
             fontSize: '16px',
             fill: '#4ECDC4',
             fontStyle: 'bold',
@@ -132,11 +132,11 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // 玩家血条（大）
-        this.playerHpBg = this.add.rectangle(850, 30, 150, 20, 0x333333);
-        this.playerHpBar = this.add.rectangle(775, 30, 150, 20, 0x00FF00);
+        this.playerHpBg = this.add.rectangle(550, 30, 150, 20, 0x333333);
+        this.playerHpBar = this.add.rectangle(475, 30, 150, 20, 0x00FF00);
         this.playerHpBar.setOrigin(0, 0.5);
         
-        this.playerHpText = this.add.text(850, 55, `${this.player.hp}/${this.player.maxHp}`, {
+        this.playerHpText = this.add.text(550, 55, `${this.player.hp}/${this.player.maxHp}`, {
             fontSize: '14px',
             fill: '#ffffff'
         }).setOrigin(0.5);

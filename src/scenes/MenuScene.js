@@ -5,10 +5,10 @@ class MenuScene extends Phaser.Scene {
     
     create() {
         // 背景
-        this.add.image(480, 320, 'background');
+        this.add.image(320, 480, 'background');
         
         // 版本号（右上角）
-        this.add.text(910, 20, 'v1.6', {
+        this.add.text(620, 20, 'v1.7', {
             fontSize: '16px',
             fill: '#888888',
             fontStyle: 'bold'
@@ -35,8 +35,8 @@ class MenuScene extends Phaser.Scene {
     
     createTitle() {
         // 主标题
-        const title = this.add.text(480, 60, '像素大乱斗', {
-            fontSize: '56px',
+        const title = this.add.text(320, 80, '像素大乱斗', {
+            fontSize: '48px',
             fill: '#FFD93D',
             fontStyle: 'bold',
             stroke: '#FF6B6B',
@@ -44,8 +44,8 @@ class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // 副标题
-        const subtitle = this.add.text(480, 120, '谁能活到最后？', {
-            fontSize: '24px',
+        const subtitle = this.add.text(320, 140, '谁能活到最后？', {
+            fontSize: '20px',
             fill: '#4ECDC4',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -64,16 +64,16 @@ class MenuScene extends Phaser.Scene {
     
     createCharacterSelection() {
         const characters = getAllCharacters();
-        const startX = 150;
+        const startX = 90;
         const startY = 200;
-        const spacingX = 110;
-        const spacingY = 130;
+        const spacingX = 150;
+        const spacingY = 160;
         
         this.characterSlots = [];
         
         characters.forEach((char, index) => {
-            const col = index % 4;
-            const row = Math.floor(index / 4);
+            const col = index % 3;
+            const row = Math.floor(index / 3);
             const x = startX + col * spacingX;
             const y = startY + row * spacingY;
             
@@ -167,7 +167,7 @@ class MenuScene extends Phaser.Scene {
     
     createInfoPanel() {
         // 信息面板背景
-        this.infoPanel = this.add.container(750, 280);
+        this.infoPanel = this.add.container(320, 720);
         
         const panelBg = this.add.rectangle(0, 0, 180, 300, 0x000000, 0.7);
         panelBg.setStrokeStyle(2, 0x666666);
@@ -217,7 +217,7 @@ class MenuScene extends Phaser.Scene {
     }
     
     createStartButton() {
-        this.startButton = this.add.container(480, 520);
+        this.startButton = this.add.container(320, 880);
         
         const bg = this.add.rectangle(0, 0, 200, 60, 0xFF6B6B);
         bg.setStrokeStyle(3, 0xFFFFFF);
@@ -269,8 +269,8 @@ class MenuScene extends Phaser.Scene {
     createDecorations() {
         // 浮动装饰
         for (let i = 0; i < 5; i++) {
-            const x = Phaser.Math.Between(50, 900);
-            const y = Phaser.Math.Between(400, 600);
+            const x = Phaser.Math.Between(50, 590);
+            const y = Phaser.Math.Between(500, 800);
             const emoji = ['⭐', '💥', '✨', '🎮', '🔥'][i];
             
             const deco = this.add.text(x, y, emoji, {

@@ -1,8 +1,8 @@
 // 游戏配置
 const config = {
     type: Phaser.AUTO,
-    width: 960,
-    height: 640,
+    width: 640,
+    height: 960,
     parent: 'game-container',
     backgroundColor: '#1a1a2e',
     pixelArt: true,
