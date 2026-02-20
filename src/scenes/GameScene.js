@@ -7,6 +7,7 @@ class GameScene extends Phaser.Scene {
         this.selectedChar = data.selectedCharacter;
         this.gameTime = 180;
         this.isGameOver = false;
+        this.autoFireTimer = null;
     }
     
     create() {
@@ -37,6 +38,9 @@ class GameScene extends Phaser.Scene {
         
         // 开始提示
         this.showStartHint();
+        
+        // 自动射击
+        this.startAutoFire();
     }
     
     createPlayer() {
@@ -250,6 +254,25 @@ class GameScene extends Phaser.Scene {
         });
     }
     
+    startAutoFire() {
+        this.autoFireTimer = this.time.addEvent({
+            delay: 150,
+            callback: () => {
+                if (!this.isGameOver) {
+                    this.autoFire();
+                }
+            },
+            loop: true
+        });
+    }
+    
+    stopAutoFire() {
+        if (this.autoFireTimer) {
+            this.autoFireTimer.remove();
+            this.autoFireTimer = null;
+        }
+    }
+    
     createHitEffect(x, y, color) {
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2;
@@ -278,6 +301,7 @@ class GameScene extends Phaser.Scene {
     gameWin() {
         this.isGameOver = true;
         this.timerEvent.remove();
+        this.stopAutoFire();
         
         // 彩花
         const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
@@ -305,6 +329,7 @@ class GameScene extends Phaser.Scene {
     gameLose(reason) {
         this.isGameOver = true;
         this.timerEvent.remove();
+        this.stopAutoFire();
         
         const text = this.add.text(320, 480, reason === 'timeout' ? '时间到!' : '你挂了!', {
             fontSize: '64px',
