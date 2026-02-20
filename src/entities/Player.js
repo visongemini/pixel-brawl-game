@@ -112,6 +112,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     }
     
     die() {
+        console.log('玩家死亡!');
         // 死亡特效
         const particles = this.scene.add.particles(this.x, this.y, 'player_' + this.characterData.id, {
             speed: { min: 50, max: 200 },
@@ -134,6 +135,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     }
     
     fire(targetX, targetY) {
+        console.log('Player.fire() 被调用! 目标:', targetX, targetY);
         const weapon = this.characterData.weapon;
         const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
         
@@ -166,6 +168,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     
     createBullet(angle) {
         const weapon = this.characterData.weapon;
+        console.log('创建子弹, 武器:', weapon);
         const bullet = new Bullet(this.scene, this.x, this.y, null, {
             damage: weapon.damage,
             speed: weapon.bulletSpeed,
@@ -183,15 +186,20 @@ class Player extends Phaser.Physics.Arcade.Sprite {
         
         // 添加到子弹组！
         if (this.scene.bullets) {
+            console.log('添加子弹到场景子弹组');
             this.scene.bullets.add(bullet);
+        } else {
+            console.warn('场景子弹组不存在!');
         }
         
         return bullet;
     }
     
     useSkill(targetX, targetY) {
+        console.log('Player.useSkill() 被调用!');
         const time = this.scene.time.now;
         if (time - this.lastSkillTime < this.skillCooldown) {
+            console.log('技能冷却中!');
             return false;
         }
         

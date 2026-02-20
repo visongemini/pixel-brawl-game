@@ -7,9 +7,12 @@ class GameScene extends Phaser.Scene {
         this.selectedCharacter = data.selectedCharacter;
         this.gameTime = 180; // 3分钟倒计时
         this.isGameOver = false;
+        this.frameCount = 0;
     }
     
     create() {
+        console.log('=== GameScene.create 开始 ===');
+        
         // 背景
         this.add.image(480, 320, 'background');
         
@@ -36,9 +39,12 @@ class GameScene extends Phaser.Scene {
         
         // 游戏开始提示
         this.showStartHint();
+        
+        console.log('=== GameScene.create 完成 ===');
     }
     
     createPlayer() {
+        console.log('创建玩家:', this.selectedCharacter.name);
         this.player = new Player(this, 480, 550, this.selectedCharacter);
         this.player.setDepth(10);
         
@@ -54,17 +60,20 @@ class GameScene extends Phaser.Scene {
     }
     
     createEnemies() {
+        console.log('创建敌人...');
         this.enemies = this.physics.add.group();
         
         // 获取其他6个角色
         const allChars = getAllCharacters();
         const enemyChars = allChars.filter(c => c.id !== this.selectedCharacter.id);
+        console.log('敌人数量:', enemyChars.length);
         
         // 随机位置生成敌人
         enemyChars.forEach((char, index) => {
             const x = 100 + (index % 3) * 300 + Phaser.Math.Between(-50, 50);
             const y = 80 + Math.floor(index / 3) * 120 + Phaser.Math.Between(-30, 30);
             
+            console.log(`创建敌人 ${index + 1}:`, char.name, '在', x, y);
             const enemy = new Enemy(this, x, y, char, this.player);
             enemy.setDepth(10);
             this.enemies.add(enemy);
@@ -152,11 +161,16 @@ class GameScene extends Phaser.Scene {
     }
     
     createCollisions() {
-        // 玩家子弹击中敌人 - 最简单直接的方式！
+        console.log('创建碰撞检测...');
+        
+        // 玩家子弹击中敌人
         this.physics.add.overlap(
             this.bullets,
             this.enemies,
-            this.hitEnemy,
+            (bullet, enemy) => {
+                console.log('💥 玩家子弹击中敌人!');
+                this.hitEnemy(bullet, enemy);
+            },
             null,
             this
         );
@@ -165,7 +179,10 @@ class GameScene extends Phaser.Scene {
         this.physics.add.overlap(
             this.enemyBullets,
             this.player,
-            this.hitPlayer,
+            (bullet, player) => {
+                console.log('💥 敌人子弹击中玩家!');
+                this.hitPlayer(bullet, player);
+            },
             null,
             this
         );
@@ -175,9 +192,13 @@ class GameScene extends Phaser.Scene {
         
         // 敌人和玩家碰撞
         this.physics.add.collider(this.enemies, this.player);
+        
+        console.log('碰撞检测创建完成!');
     }
     
     createInputs() {
+        console.log('创建输入控制...');
+        
         // 创建子弹组（必须先创建，后面碰撞检测要用）
         this.bullets = this.physics.add.group({
             classType: Bullet,
@@ -192,6 +213,7 @@ class GameScene extends Phaser.Scene {
         // ===== 触屏控制 =====
         const width = this.scale.width;
         const height = this.scale.height;
+        console.log('游戏尺寸:', width, 'x', height);
         
         // 虚拟摇杆（左半边屏幕）
         this.joystick = {
@@ -233,7 +255,11 @@ class GameScene extends Phaser.Scene {
         
         // 触屏事件处理
         this.input.on('pointerdown', (pointer) => {
-            if (this.isGameOver || !this.player.active) return;
+            console.log('👆 点击事件! 位置:', pointer.x, pointer.y);
+            if (this.isGameOver || !this.player.active) {
+                console.log('游戏已结束或玩家不活跃，忽略点击');
+                return;
+            }
             
             const x = pointer.x;
             const y = pointer.y;
@@ -241,6 +267,7 @@ class GameScene extends Phaser.Scene {
             
             // 左半边 = 摇杆
             if (x < centerX) {
+                console.log('🎮 激活摇杆');
                 this.joystick.active = true;
                 this.joystick.pointer = pointer;
                 this.updateJoystick(pointer.x, pointer.y);
@@ -250,8 +277,10 @@ class GameScene extends Phaser.Scene {
                 // 检查是否点到技能按钮
                 const distToSkill = Phaser.Math.Distance.Between(x, y, width - 80, height - 80);
                 if (distToSkill < 60) {
+                    console.log('🔥 释放技能!');
                     this.fireSkill();
                 } else {
+                    console.log('🔫 自动射击!');
                     this.autoFire();
                 }
             }
@@ -265,6 +294,7 @@ class GameScene extends Phaser.Scene {
         
         this.input.on('pointerup', (pointer) => {
             if (this.joystick.pointer === pointer) {
+                console.log('✋ 释放摇杆');
                 this.joystick.active = false;
                 this.joystick.pointer = null;
                 // 摇杆复位
@@ -272,6 +302,8 @@ class GameScene extends Phaser.Scene {
                 this.joystickStick.y = this.joystick.baseY;
             }
         });
+        
+        console.log('输入控制创建完成!');
     }
     
     updateJoystick(x, y) {
@@ -293,6 +325,7 @@ class GameScene extends Phaser.Scene {
     }
     
     autoFire() {
+        console.log('autoFire() 被调用');
         // 自动瞄准最近的敌人
         let nearestEnemy = null;
         let nearestDist = Infinity;
@@ -307,14 +340,17 @@ class GameScene extends Phaser.Scene {
         });
         
         if (nearestEnemy) {
+            console.log('瞄准敌人:', nearestEnemy.characterData.name);
             this.player.fire(nearestEnemy.x, nearestEnemy.y);
         } else {
+            console.log('没有敌人，向前射击');
             // 没有敌人就向前射
             this.player.fire(this.player.x, this.player.y - 100);
         }
     }
     
     fireSkill() {
+        console.log('fireSkill() 被调用');
         // 自动瞄准最近的敌人释放技能
         let nearestEnemy = null;
         let nearestDist = Infinity;
@@ -329,8 +365,10 @@ class GameScene extends Phaser.Scene {
         });
         
         if (nearestEnemy) {
+            console.log('对敌人释放技能:', nearestEnemy.characterData.name);
             this.player.useSkill(nearestEnemy.x, nearestEnemy.y);
         } else {
+            console.log('没有敌人，向前释放技能');
             this.player.useSkill(this.player.x, this.player.y - 100);
         }
         
@@ -403,10 +441,15 @@ class GameScene extends Phaser.Scene {
     }
     
     hitEnemy(bullet, enemy) {
-        if (!bullet.active || !enemy.active) return;
+        console.log('=== hitEnemy 被调用 ===');
+        if (!bullet.active || !enemy.active) {
+            console.log('子弹或敌人不活跃，跳过');
+            return;
+        }
         
         // 直接使用固定伤害值，确保伤害一定生效！
         const damage = 15;
+        console.log('造成伤害:', damage);
         enemy.takeDamage(damage);
         
         // 击中特效
@@ -420,6 +463,7 @@ class GameScene extends Phaser.Scene {
     }
     
     hitPlayer(bullet, player) {
+        console.log('=== hitPlayer 被调用 ===');
         if (!bullet.active || !player.active) return;
         
         const result = player.takeDamage(bullet.bulletDamage);
@@ -544,6 +588,8 @@ class GameScene extends Phaser.Scene {
     }
     
     update() {
+        this.frameCount++;
+        
         if (this.isGameOver || !this.player.active) return;
         
         // ===== 摇杆控制移动 =====
@@ -578,5 +624,12 @@ class GameScene extends Phaser.Scene {
         
         // 更新UI
         this.updateUI();
+        
+        // 每100帧输出一次性能统计
+        if (this.frameCount % 100 === 0) {
+            console.log('📊 性能统计 - 帧:', this.frameCount, 
+                '子弹数:', this.bullets.countActive() + this.enemyBullets.countActive(),
+                '敌人数:', this.enemies.countActive());
+        }
     }
 }

@@ -2,6 +2,8 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, texture, config) {
         super(scene, x, y, texture);
         
+        console.log('Bullet 构造函数被调用!');
+        
         // 使用 bulletDamage 避免与 Phaser 内置属性冲突！
         this.bulletDamage = config.damage || 10;
         this.speed = config.speed || 400;
@@ -38,27 +40,38 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
         if (config.trail) {
             this.createTrail(scene, config.color);
         }
+        
+        console.log('Bullet 创建完成! bulletDamage:', this.bulletDamage);
     }
     
     createTrail(scene, color) {
-        // 简化的拖尾效果
-        this.trailTimer = scene.time.addEvent({
-            delay: 50,
-            callback: () => {
-                if (this.active) {
-                    const trail = scene.add.circle(this.x, this.y, 3, color, 0.5);
-                    trail.setDepth(this.depth - 1);
-                    scene.tweens.add({
-                        targets: trail,
-                        alpha: 0,
-                        scale: 0.5,
-                        duration: 300,
-                        onComplete: () => trail.destroy()
-                    });
-                }
-            },
-            loop: true
-        });
+        // 简化的拖尾效果 - 使用场景事件而不是定时器，避免内存泄漏
+        this.trailScene = scene;
+        this.trailColor = color;
+        this.lastTrailTime = 0;
+        this.trailInterval = 50;
+        
+        // 使用场景的 update 事件来创建拖尾
+        this.trailUpdateCallback = () => {
+            if (!this.active) return;
+            
+            const now = this.trailScene.time.now;
+            if (now - this.lastTrailTime >= this.trailInterval) {
+                this.lastTrailTime = now;
+                
+                const trail = this.trailScene.add.circle(this.x, this.y, 3, this.trailColor, 0.5);
+                trail.setDepth(this.depth - 1);
+                this.trailScene.tweens.add({
+                    targets: trail,
+                    alpha: 0,
+                    scale: 0.5,
+                    duration: 300,
+                    onComplete: () => trail.destroy()
+                });
+            }
+        };
+        
+        this.trailScene.events.on('update', this.trailUpdateCallback);
     }
     
     preUpdate(time, delta) {
@@ -90,6 +103,7 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
         this.lifespan -= delta;
         if (this.lifespan <= 0) {
             this.destroy();
+            return;
         }
         
         // 边界检查
@@ -99,9 +113,15 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
     }
     
     destroy() {
-        if (this.trailTimer) {
-            this.trailTimer.remove();
+        console.log('Bullet.destroy() 被调用');
+        
+        // 清理拖尾效果
+        if (this.trailScene && this.trailUpdateCallback) {
+            this.trailScene.events.off('update', this.trailUpdateCallback);
+            this.trailUpdateCallback = null;
+            this.trailScene = null;
         }
+        
         super.destroy();
     }
 }
