@@ -7,6 +7,13 @@ class MenuScene extends Phaser.Scene {
         // 背景
         this.add.image(480, 320, 'background');
         
+        // 版本号（右上角）
+        this.add.text(910, 20, 'v1.6', {
+            fontSize: '16px',
+            fill: '#888888',
+            fontStyle: 'bold'
+        }).setOrigin(1, 0);
+        
         // 标题
         this.createTitle();
         
