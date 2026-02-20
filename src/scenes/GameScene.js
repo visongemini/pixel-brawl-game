@@ -447,9 +447,9 @@ class GameScene extends Phaser.Scene {
             return;
         }
         
-        // 直接使用固定伤害值，确保伤害一定生效！
-        const damage = 15;
-        console.log('造成伤害:', damage);
+        // 使用子弹的伤害值，如果没有就用默认值
+        const damage = bullet.bulletDamage || 10;
+        console.log('造成伤害:', damage, '子弹伤害:', bullet.bulletDamage);
         enemy.takeDamage(damage);
         
         // 击中特效
