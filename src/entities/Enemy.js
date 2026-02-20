@@ -381,6 +381,10 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.y = 50;
             this.body.velocity.y = Math.abs(this.body.velocity.y);
         }
+        if (this.y > 550) {
+            this.y = 550;
+            this.body.velocity.y = -Math.abs(this.body.velocity.y);
+        }
         
         // AI行为
         if (!this.isStunned) {

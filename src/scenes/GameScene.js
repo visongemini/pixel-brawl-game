@@ -419,7 +419,7 @@ class GameScene extends Phaser.Scene {
     }
     
     showStartHint() {
-        const hint = this.add.text(480, 320, '战斗开始!', {
+        const hint = this.add.text(320, 480, '战斗开始!', {
             fontSize: '48px',
             fill: '#FFD93D',
             fontStyle: 'bold',
@@ -620,12 +620,12 @@ class GameScene extends Phaser.Scene {
         this.player.body.velocity.y = vy;
         
         // 限制玩家在底部区域
-        if (this.player.y < 350) {
-            this.player.y = 350;
+        if (this.player.y < 600) {
+            this.player.y = 600;
             this.player.body.velocity.y = 0;
         }
-        if (this.player.y > 620) {
-            this.player.y = 620;
+        if (this.player.y > 940) {
+            this.player.y = 940;
             this.player.body.velocity.y = 0;
         }
         

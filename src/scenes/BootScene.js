@@ -69,34 +69,34 @@ class BootScene extends Phaser.Scene {
         
         // 深色背景
         graphics.fillStyle(0x1a1a2e, 1);
-        graphics.fillRect(0, 0, 960, 640);
+        graphics.fillRect(0, 0, 640, 960);
         
         // 网格线
         graphics.lineStyle(1, 0x333333, 0.5);
-        for (let x = 0; x < 960; x += 40) {
+        for (let x = 0; x < 640; x += 40) {
             graphics.moveTo(x, 0);
-            graphics.lineTo(x, 640);
+            graphics.lineTo(x, 960);
         }
-        for (let y = 0; y < 640; y += 40) {
+        for (let y = 0; y < 960; y += 40) {
             graphics.moveTo(0, y);
-            graphics.lineTo(960, y);
+            graphics.lineTo(640, y);
         }
         graphics.strokePath();
         
         // 装饰性的像素星星
         graphics.fillStyle(0xFFFFFF, 0.8);
         for (let i = 0; i < 50; i++) {
-            const x = Math.random() * 960;
-            const y = Math.random() * 640;
+            const x = Math.random() * 640;
+            const y = Math.random() * 960;
             graphics.fillRect(x, y, 2, 2);
         }
         
-        graphics.generateTexture('background', 960, 640);
+        graphics.generateTexture('background', 640, 960);
     }
     
     create() {
         // 添加加载动画
-        const loadingText = this.add.text(480, 320, 'Loading...', {
+        const loadingText = this.add.text(320, 480, 'Loading...', {
             fontSize: '32px',
             fill: '#ffffff',
             fontStyle: 'bold'
