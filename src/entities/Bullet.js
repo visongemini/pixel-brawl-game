@@ -2,7 +2,9 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, texture, config) {
         super(scene, x, y, texture);
         
-        this.damage = config.damage || 10;
+        console.log('Bullet 构造函数被调用，config:', config);
+        // 使用 bulletDamage 避免与 Phaser 内置属性冲突！
+        this.bulletDamage = config.damage || 10;
         this.speed = config.speed || 400;
         this.owner = config.owner || null;
         this.isEnemy = config.isEnemy || false;

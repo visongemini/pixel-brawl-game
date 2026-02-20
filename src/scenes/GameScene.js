@@ -16,6 +16,9 @@ class GameScene extends Phaser.Scene {
         // 物理世界边界
         this.physics.world.setBounds(0, 0, 960, 640);
         
+        // ===== 先创建子弹组！必须在碰撞设置之前 =====
+        this.createInputs();
+        
         // 创建玩家
         this.createPlayer();
         
@@ -27,9 +30,6 @@ class GameScene extends Phaser.Scene {
         
         // 创建碰撞
         this.createCollisions();
-        
-        // 输入控制
-        this.createInputs();
         
         // 开始倒计时
         this.startTimer();
@@ -107,7 +107,7 @@ class GameScene extends Phaser.Scene {
         });
         
         // 技能提示
-        this.skillHint = this.add.text(480, 600, `【空格】${this.selectedCharacter.skill.name}`, {
+        this.skillHint = this.add.text(480, 600, `【点击右下角按钮】${this.selectedCharacter.skill.name}`, {
             fontSize: '16px',
             fill: '#4ECDC4',
             fontStyle: 'bold',
@@ -156,7 +156,10 @@ class GameScene extends Phaser.Scene {
         this.physics.add.overlap(
             this.bullets,
             this.enemies,
-            this.hitEnemy,
+            (bullet, enemy) => {
+                console.log('碰撞发生！子弹:', bullet, '敌人:', enemy);
+                this.hitEnemy(bullet, enemy);
+            },
             null,
             this
         );
@@ -178,34 +181,7 @@ class GameScene extends Phaser.Scene {
     }
     
     createInputs() {
-        // 键盘控制
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.wasd = this.input.keyboard.addKeys({
-            up: Phaser.Input.Keyboard.KeyCodes.W,
-            down: Phaser.Input.Keyboard.KeyCodes.S,
-            left: Phaser.Input.Keyboard.KeyCodes.A,
-            right: Phaser.Input.Keyboard.KeyCodes.D
-        });
-        
-        // 技能键
-        this.skillKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        
-        // 鼠标射击
-        this.input.on('pointerdown', (pointer) => {
-            if (!this.isGameOver && this.player.active) {
-                this.player.fire(pointer.worldX, pointer.worldY);
-            }
-        });
-        
-        // 技能释放
-        this.skillKey.on('down', () => {
-            if (!this.isGameOver && this.player.active) {
-                const pointer = this.input.activePointer;
-                this.player.useSkill(pointer.worldX, pointer.worldY);
-            }
-        });
-        
-        // 创建子弹组
+        // 创建子弹组（必须先创建，后面碰撞检测要用）
         this.bullets = this.physics.add.group({
             classType: Bullet,
             runChildUpdate: true
@@ -214,6 +190,159 @@ class GameScene extends Phaser.Scene {
         this.enemyBullets = this.physics.add.group({
             classType: Bullet,
             runChildUpdate: true
+        });
+
+        // ===== 触屏控制 =====
+        const width = this.scale.width;
+        const height = this.scale.height;
+        
+        // 虚拟摇杆（左半边屏幕）
+        this.joystick = {
+            active: false,
+            baseX: 120,
+            baseY: height - 120,
+            stickX: 120,
+            stickY: height - 120,
+            maxDist: 60,
+            pointer: null
+        };
+        
+        // 摇杆底座
+        this.joystickBase = this.add.circle(this.joystick.baseX, this.joystick.baseY, 60, 0x333333, 0.5);
+        this.joystickBase.setStrokeStyle(3, 0x666666);
+        this.joystickBase.setDepth(100);
+        
+        // 摇杆头
+        this.joystickStick = this.add.circle(this.joystick.stickX, this.joystick.stickY, 25, 0x00d4aa, 0.8);
+        this.joystickStick.setDepth(101);
+        
+        // 技能按钮（右下角）
+        this.skillBtn = this.add.circle(width - 80, height - 80, 50, 0xe94560, 0.8);
+        this.skillBtn.setStrokeStyle(4, 0xff6b6b);
+        this.skillBtn.setDepth(100);
+        
+        this.skillBtnText = this.add.text(width - 80, height - 80, '技能', {
+            fontSize: '20px',
+            fill: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(101);
+        
+        // 射击区域提示（右半边）
+        this.shootHint = this.add.text(width - 120, height - 200, '点击射击', {
+            fontSize: '16px',
+            fill: '#ffffff',
+            alpha: 0.5
+        }).setOrigin(0.5).setDepth(100);
+        
+        // 触屏事件处理
+        this.input.on('pointerdown', (pointer) => {
+            if (this.isGameOver || !this.player.active) return;
+            
+            const x = pointer.x;
+            const y = pointer.y;
+            const centerX = width / 2;
+            
+            // 左半边 = 摇杆
+            if (x < centerX) {
+                this.joystick.active = true;
+                this.joystick.pointer = pointer;
+                this.updateJoystick(pointer.x, pointer.y);
+            }
+            // 右半边 = 射击（点击即可，自动瞄准）
+            else {
+                // 检查是否点到技能按钮
+                const distToSkill = Phaser.Math.Distance.Between(x, y, width - 80, height - 80);
+                if (distToSkill < 60) {
+                    this.fireSkill();
+                } else {
+                    this.autoFire();
+                }
+            }
+        });
+        
+        this.input.on('pointermove', (pointer) => {
+            if (this.joystick.active && this.joystick.pointer === pointer) {
+                this.updateJoystick(pointer.x, pointer.y);
+            }
+        });
+        
+        this.input.on('pointerup', (pointer) => {
+            if (this.joystick.pointer === pointer) {
+                this.joystick.active = false;
+                this.joystick.pointer = null;
+                // 摇杆复位
+                this.joystickStick.x = this.joystick.baseX;
+                this.joystickStick.y = this.joystick.baseY;
+            }
+        });
+    }
+    
+    updateJoystick(x, y) {
+        const dx = x - this.joystick.baseX;
+        const dy = y - this.joystick.baseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist <= this.joystick.maxDist) {
+            this.joystick.stickX = x;
+            this.joystick.stickY = y;
+        } else {
+            const angle = Math.atan2(dy, dx);
+            this.joystick.stickX = this.joystick.baseX + Math.cos(angle) * this.joystick.maxDist;
+            this.joystick.stickY = this.joystick.baseY + Math.sin(angle) * this.joystick.maxDist;
+        }
+        
+        this.joystickStick.x = this.joystick.stickX;
+        this.joystickStick.y = this.joystick.stickY;
+    }
+    
+    autoFire() {
+        // 自动瞄准最近的敌人
+        let nearestEnemy = null;
+        let nearestDist = Infinity;
+        
+        this.enemies.getChildren().forEach(enemy => {
+            if (!enemy.active) return;
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestEnemy = enemy;
+            }
+        });
+        
+        if (nearestEnemy) {
+            this.player.fire(nearestEnemy.x, nearestEnemy.y);
+        } else {
+            // 没有敌人就向前射
+            this.player.fire(this.player.x, this.player.y - 100);
+        }
+    }
+    
+    fireSkill() {
+        // 自动瞄准最近的敌人释放技能
+        let nearestEnemy = null;
+        let nearestDist = Infinity;
+        
+        this.enemies.getChildren().forEach(enemy => {
+            if (!enemy.active) return;
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestEnemy = enemy;
+            }
+        });
+        
+        if (nearestEnemy) {
+            this.player.useSkill(nearestEnemy.x, nearestEnemy.y);
+        } else {
+            this.player.useSkill(this.player.x, this.player.y - 100);
+        }
+        
+        // 按钮按下效果
+        this.tweens.add({
+            targets: this.skillBtn,
+            scale: 0.9,
+            duration: 50,
+            yoyo: true
         });
     }
     
@@ -279,11 +408,22 @@ class GameScene extends Phaser.Scene {
     hitEnemy(bullet, enemy) {
         if (!bullet.active || !enemy.active) return;
         
-        const isDead = enemy.takeDamage(bullet.damage);
-        bullet.destroy();
+        console.log('=== hitEnemy 被调用 ===');
+        console.log('bullet.bulletDamage:', bullet.bulletDamage, typeof bullet.bulletDamage);
+        console.log('子弹对象:', bullet);
+        console.log('敌人当前血量:', enemy.hp);
         
-        // 击中特效
-        this.createHitEffect(bullet.x, bullet.y, bullet.fillColor);
+        // 使用子弹的伤害值
+        const damage = bullet.bulletDamage;
+        console.log('使用子弹伤害:', damage);
+        const isDead = enemy.takeDamage(damage);
+        console.log('敌人受伤后血量:', enemy.hp);
+        
+        // 击中特效 - 使用白色或子弹的tint颜色
+        const hitColor = bullet.tintTopLeft || 0xFFFFFF;
+        this.createHitEffect(bullet.x, bullet.y, hitColor);
+        
+        bullet.destroy();
         
         // 更新UI
         this.updateUI();
@@ -292,7 +432,7 @@ class GameScene extends Phaser.Scene {
     hitPlayer(bullet, player) {
         if (!bullet.active || !player.active) return;
         
-        const result = player.takeDamage(bullet.damage);
+        const result = player.takeDamage(bullet.bulletDamage);
         bullet.destroy();
         
         // 击中特效
@@ -416,16 +556,22 @@ class GameScene extends Phaser.Scene {
     update() {
         if (this.isGameOver || !this.player.active) return;
         
-        // 玩家移动
+        // ===== 摇杆控制移动 =====
         const speed = this.player.speed;
         let vx = 0;
         let vy = 0;
         
-        // 键盘输入
-        if (this.cursors.left.isDown || this.wasd.left.isDown) vx = -speed;
-        if (this.cursors.right.isDown || this.wasd.right.isDown) vx = speed;
-        if (this.cursors.up.isDown || this.wasd.up.isDown) vy = -speed;
-        if (this.cursors.down.isDown || this.wasd.down.isDown) vy = speed;
+        if (this.joystick.active) {
+            const dx = this.joystick.stickX - this.joystick.baseX;
+            const dy = this.joystick.stickY - this.joystick.baseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 5) {
+                // 归一化并应用速度
+                vx = (dx / this.joystick.maxDist) * speed;
+                vy = (dy / this.joystick.maxDist) * speed;
+            }
+        }
         
         this.player.body.velocity.x = vx;
         this.player.body.velocity.y = vy;

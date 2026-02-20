@@ -88,7 +88,12 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     
     takeDamage(damage) {
+        console.log('=== Enemy.takeDamage 被调用 ===');
+        console.log('传入的 damage:', damage, typeof damage);
+        console.log('当前 this.hp:', this.hp);
+        
         this.hp -= damage;
+        console.log('受伤后 this.hp:', this.hp);
         this.updateHpBar();
         
         // 受伤闪烁
@@ -258,6 +263,11 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         });
         
         bullet.body.setCircle(weapon.bulletSize / 2);
+        
+        // 添加到敌人子弹组！
+        if (this.scene.enemyBullets) {
+            this.scene.enemyBullets.add(bullet);
+        }
         
         return bullet;
     }
